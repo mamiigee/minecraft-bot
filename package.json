@@ -1,0 +1,14 @@
+{
+  "name": "minecraft-bot-panel",
+  "version": "1.0.0",
+  "description": "Minecraft 7/24 AFK Bot Paneli",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mineflayer": "^4.20.0",
+    "socket.io": "^4.7.5"
+  }
+}
