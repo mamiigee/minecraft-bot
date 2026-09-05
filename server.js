@@ -148,6 +148,11 @@ app.get('/', (req, res) => {
                                 <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
                             </div>
                             <div class="card">
+                                <h3>Bot Envanteri</h3>
+                                <button class="chat-btn" onclick="loadInventory('\${id}')">Envanteri Yenile / Göster</button>
+                                <div id="inventoryBox" style="margin-top: 10px; max-height: 150px; overflow-y: auto; font-size: 12px; background: #111; padding: 8px; border-radius: 4px; color: #ddd;">Envanteri görmek için butona basın.</div>
+                            </div>
+                            <div class="card">
                                 <h3>Anlık Mesaj Gönder</h3>
                                 <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
                                 <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
@@ -176,7 +181,6 @@ app.get('/', (req, res) => {
                     socket.emit('joinBotRoom', id);
                 }
 
-                // Gelen mesajları doğrudan doğruya ilgili botun geçmişine ve ekranına işliyoruz
                 socket.off('chatMessage');
                 socket.on('chatMessage', function(data) {
                     const { botId, text } = data;
@@ -193,6 +197,26 @@ app.get('/', (req, res) => {
                         }
                     }
                 });
+
+                async function loadInventory(id) {
+                    let res = await fetch('/inventory/' + id);
+                    let json = await res.json();
+                    const invBox = document.getElementById('inventoryBox');
+                    if(json.status === "success") {
+                        if(json.items.length === 0) {
+                            invBox.innerHTML = "Botun envanteri boş.";
+                            return;
+                        }
+                        let html = "<ul style='padding-left: 15px; margin: 0;'>";
+                        json.items.forEach(item => {
+                            html += \`<li><b>\${item.name}</b> (Adet: \${item.count})</li>\`;
+                        });
+                        html += "</ul>";
+                        invBox.innerHTML = html;
+                    } else {
+                        invBox.innerHTML = json.message;
+                    }
+                }
 
                 async function updateLoop(id) {
                     let msg = document.getElementById('loopMsgInput').value;
@@ -256,6 +280,15 @@ io.on('connection', (socket) => {
 
 app.get('/bots', (req, res) => {
     res.json(manager.getActiveBots());
+});
+
+app.get('/inventory/:id', (req, res) => {
+    const items = manager.getInventory(req.params.id);
+    if (items) {
+        res.json({ status: "success", items });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil veya envantere ulaşılamıyor!" });
+    }
 });
 
 app.post('/start', (req, res) => {
