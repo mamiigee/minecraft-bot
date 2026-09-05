@@ -1,6 +1,5 @@
 const mineflayer = require('mineflayer');
 const fs = require('fs');
-const vec = require('vec3');
 
 class AFKBotManager {
     constructor() {
@@ -69,7 +68,6 @@ class AFKBotManager {
         const botInstance = this.bots.get(id);
         if (!botInstance) return;
 
-        // Eski bağlantı kalıntısı varsa tamamen temizle (Çakışmayı önler)
         if (botInstance.bot) {
             try {
                 botInstance.bot.quit();
@@ -144,19 +142,19 @@ class AFKBotManager {
             });
 
             botInstance.bot.on('kicked', (reason) => {
-                console.log(`[BOT:${id}] Oyundan atıldı! Neden: ${reason}`);
+                console.log(`[BOT:${id}] Oyundan atıldı! Neden:`, JSON.stringify(reason));
                 this.cleanupBot(id);
                 this.scheduleReconnect(id);
             });
 
             botInstance.bot.on('end', (reason) => {
-                console.log(`[BOT:${id}] Bağlantı koptu (End). Neden: ${reason}`);
+                console.log(`[BOT:${id}] Bağlantı koptu. Neden: ${reason}`);
                 this.cleanupBot(id);
                 this.scheduleReconnect(id);
             });
 
             botInstance.bot.on('error', (err) => {
-                console.log(`[BOT:${id}] Bağlantı hatası: ${err.message}`);
+                console.log(`[BOT:${id}] Hata: ${err.message}`);
             });
 
         } catch (e) {
@@ -184,7 +182,7 @@ class AFKBotManager {
         if (!botInstance) return;
         if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
 
-        console.log(`[BOT:${id}] 15 saniye sonra tekrar bağlanmaya çalışacak...`);
+        console.log(`[BOT:${id}] 15 saniye sonra tekrar bağlanılıyor...`);
         botInstance.reconnectTimeout = setTimeout(() => {
             this.connectBot(id);
         }, 15000);
@@ -232,7 +230,7 @@ class AFKBotManager {
                 return { status: "success", message: `Bot (${id}) için ${control} durumu ${status} yapıldı.` };
             }
         }
-        return { status: "error", message: "Bot bulunamadı veya geçersiz kontrol!" };
+        return { status: "error", message: "Bot aktif değil veya geçersiz kontrol!" };
     }
 
     jump(id) {
@@ -246,7 +244,7 @@ class AFKBotManager {
             }, 300);
             return { status: "success", message: `Bot (${id}) zıpladı!` };
         }
-        return { status: "error", message: "Bot bulunamadı!" };
+        return { status: "error", message: "Bot aktif değil!" };
     }
 
     clearControls(id) {
@@ -255,65 +253,10 @@ class AFKBotManager {
             botInstance.bot.clearControlStates();
             return { status: "success", message: `Bot (${id}) hareketleri durduruldu.` };
         }
-        return { status: "error", message: "Bot bulunamadı!" };
+        return { status: "error", message: "Bot aktif değil!" };
     }
 
-    digBlock(id) {
-        const botInstance = this.bots.get(id);
-        if (!botInstance || !botInstance.bot) {
-            return { status: "error", message: "Bot aktif değil!" };
-        }
-        try {
-            const targetBlock = botInstance.bot.blockAtCursor(4);
-            if (targetBlock && targetBlock.name !== 'air') {
-                botInstance.bot.dig(targetBlock, (err) => {
-                    if (err) {
-                        console.log(`[BOT:${id}] Kazma hatası: ${err.message}`);
-                    } else {
-                        console.log(`[BOT:${id}] Blok başarıyla kırıldı: ${targetBlock.name}`);
-                    }
-                });
-                return { status: "success", message: `${targetBlock.name} kazılıyor...` };
-            } else {
-                return { status: "error", message: "Önünde kırılacak blok yok!" };
-            }
-        } catch (e) {
-            return { status: "error", message: e.message };
-        }
-    }
-
-    placeBlock(id) {
-        const botInstance = this.bots.get(id);
-        if (!botInstance || !botInstance.bot) {
-            return { status: "error", message: "Bot aktif değil!" };
-        }
-        try {
-            // Elinde blok olup olmadığını kontrol et (Anti-cheat banını önlemek için şart)
-            const heldItem = botInstance.bot.heldItem;
-            if (!heldItem || !heldItem.name.includes('block') && heldItem.type === undefined) { 
-                // Not: Sunucularda elinde blok olmadan placeAt denemek anti-cheat tetikler.
-                // Güvenli olması için envanterden ilk bloğu seçtirmeye çalışabiliriz ama şimdilik uyarı verelim:
-            }
-
-            const referenceBlock = botInstance.bot.blockAtCursor(4);
-            if (!referenceBlock || referenceBlock.name === 'air') {
-                return { status: "error", message: "Konulacak geçerli bir hedef blok bulunamadı!" };
-            }
-
-            botInstance.bot.placeBlock(referenceBlock, new vec(0, 1, 0), (err) => {
-                if (err) {
-                    console.log(`[BOT:${id}] Blok koyma hatası (Anti-cheat engellemiş olabilir): ${err.message}`);
-                } else {
-                    console.log(`[BOT:${id}] Blok başarıyla konuldu.`);
-                }
-            });
-            return { status: "success", message: "Blok koyuluyor..." };
-        } catch (e) {
-            return { status: "error", message: e.message };
-        }
-    }
-
-    getInventory(id) {
+     getInventory(id) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.inventory) {
             let slots = {};
