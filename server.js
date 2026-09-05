@@ -40,6 +40,7 @@ app.get('/', (req, res) => {
                 button { background: #4CAF50; cursor: pointer; font-weight: bold; }
                 button.stop { background: #f44336; }
                 button.chat-btn { background: #2196F3; }
+                button.loop-btn { background: #ff9800; }
                 .bot-tab { padding: 10px; background: #2a2a2a; border-radius: 6px; cursor: pointer; border: 1px solid #444; text-align: center; font-weight: bold; transition: 0.2s; }
                 .bot-tab:hover, .bot-tab.active { background: #4CAF50; border-color: #66BB6A; }
                 .add-btn { background: #ff9800; }
@@ -60,7 +61,7 @@ app.get('/', (req, res) => {
             <div class="main-content" id="mainContainer">
                 <div class="empty-state">
                     <h2>Sunucuya girmek için yeni bot ekleyin</h2>
-                    <p>Sol taraftaki "+ Yeni Bot Ekle" butonuna tıklayarak ilk botunuzu yapılandırın.</p>
+                    <p>Sol taraftaki "+ Yeni Bot Ekle" butonuna tıklayarak istediğiniz kadar bot yapılandırabilirsiniz.</p>
                 </div>
             </div>
 
@@ -71,12 +72,12 @@ app.get('/', (req, res) => {
 
                 function showAddBotForm() {
                     currentActiveBot = null;
-                    document.getElementById('mainContainer').classList.remove('active');
+                    updateBotList();
                     document.getElementById('mainContainer').innerHTML = \`
                         <div class="bot-form-panel">
                             <h3>Yeni Bot Ekle ve Başlat</h3>
                             <div class="card">
-                                <label>Bot ID (Örn: bot1, farm)</label>
+                                <label>Bot ID (Örn: bot1, bot2, farm)</label>
                                 <input type="text" id="newId" placeholder="bot1">
                                 <label>Minecraft Nick</label>
                                 <input type="text" id="newUsername" placeholder="Kullanıcı Adı">
@@ -152,6 +153,14 @@ app.get('/', (req, res) => {
                                 <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
                                 <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
                             </div>
+                            <div class="card">
+                                <h3>Tekrarlayan Mesajı Ayarla / Güncelle</h3>
+                                <label>Loop Mesajı</label>
+                                <input type="text" id="loopMsgInput" value="\${bots[id].recurringMsg || ''}" placeholder="Sürekli tekrarlanacak mesaj">
+                                <label>Süre (Saniye)</label>
+                                <input type="text" id="loopIntervalInput" value="\${bots[id].recurringInterval || 60}" placeholder="60">
+                                <button class="loop-btn" onclick="updateLoop('\${id}')">Döngüyü Güncelle</button>
+                            </div>
                         </div>
                         <div class="chat-panel">
                             <h3>\${id} - Canlı Konsol</h3>
@@ -167,6 +176,18 @@ app.get('/', (req, res) => {
                             chatBox.scrollTop = chatBox.scrollHeight;
                         }
                     });
+                }
+
+                async function updateLoop(id) {
+                    let msg = document.getElementById('loopMsgInput').value;
+                    let interval = document.getElementById('loopIntervalInput').value;
+                    
+                    bots[id].recurringMsg = msg;
+                    bots[id].recurringInterval = interval;
+
+                    let res = await fetch('/loop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
+                    let json = await res.json();
+                    alert(json.message);
                 }
 
                 async function stopBot(id) {
@@ -190,7 +211,20 @@ app.get('/', (req, res) => {
                     }
                 }
 
-                showAddBotForm();
+                async function init() {
+                    let res = await fetch('/bots');
+                    let activeBots = await res.json();
+                    bots = activeBots;
+                    updateBotList();
+                    let keys = Object.keys(bots);
+                    if(keys.length > 0) {
+                        selectBot(keys[0]);
+                    } else {
+                        showAddBotForm();
+                    }
+                }
+
+                init();
             </script>
         </body>
         </html>
@@ -203,10 +237,24 @@ io.on('connection', (socket) => {
     });
 });
 
+app.get('/bots', (req, res) => {
+    res.json(manager.getActiveBots());
+});
+
 app.post('/start', (req, res) => {
     const { id, username, host, port, version, startupCommands, recurringMsg, recurringInterval } = req.body;
     const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg, recurringInterval, true);
     res.json(result);
+});
+
+app.post('/loop', (req, res) => {
+    const { id, message, interval } = req.body;
+    const success = manager.setLoop(id, message, parseInt(interval));
+    if (success) {
+        res.json({ status: "success", message: "Tekrarlayan mesaj güncellendi!" });
+    } else {
+        res.json({ status: "error", message: "Bot bulunamadı!" });
+    }
 });
 
 app.post('/stop', (req, res) => {
