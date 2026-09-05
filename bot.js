@@ -121,13 +121,11 @@ class AFKBotManager {
                 let outputText = '';
 
                 try {
-                    // Minecraft standart sohbet çeviri kalıbı (Gönderen ve Mesajı ayırır)
                     if (jsonMsg.translate === 'chat.type.text' && jsonMsg.with && jsonMsg.with.length >= 2) {
                         const sender = jsonMsg.with[0] ? jsonMsg.with[0].toString() : '';
                         const msg = jsonMsg.with[1] ? jsonMsg.with[1].toString() : '';
                         outputText = sender ? `<${sender}> ${msg}` : msg;
                     } else {
-                        // Özel eklenti çıktıları, rütbeler ve düz metinler
                         outputText = jsonMsg.toString();
                     }
                 } catch (e) {
@@ -207,6 +205,48 @@ class AFKBotManager {
         }
         return false;
     }
+
+    // --- HAREKET VE KONTROL ÖZELLİKLERİ ---
+    
+    // Yön veya eylemleri başlatma / durdurma ('forward', 'back', 'left', 'right', 'jump', 'sneak', 'sprint')
+    setControlState(id, control, status) {
+        const botInstance = this.bots.get(id);
+        if (botInstance && botInstance.bot && botInstance.bot.setControlState) {
+            const validControls = ['forward', 'back', 'left', 'right', 'jump', 'sneak', 'sprint'];
+            if (validControls.includes(control)) {
+                botInstance.bot.setControlState(control, status);
+                return { status: "success", message: `Bot (${id}) için ${control} durumu ${status} yapıldı.` };
+            }
+        }
+        return { status: "error", message: "Bot bulunamadı veya geçersiz kontrol!" };
+    }
+
+    // Tek seferlik zıplama komutu
+    jump(id) {
+        const botInstance = this.bots.get(id);
+        if (botInstance && botInstance.bot) {
+            botInstance.bot.setControlState('jump', true);
+            setTimeout(() => {
+                if (botInstance.bot) {
+                    botInstance.bot.setControlState('jump', false);
+                }
+            }, 300);
+            return { status: "success", message: `Bot (${id}) zıpladı!` };
+        }
+        return { status: "error", message: "Bot bulunamadı!" };
+    }
+
+    // Tüm hareketleri durdurma
+    clearControls(id) {
+        const botInstance = this.bots.get(id);
+        if (botInstance && botInstance.bot && botInstance.bot.clearControlStates) {
+            botInstance.bot.clearControlStates();
+            return { status: "success", message: `Bot (${id}) hareketleri durduruldu.` };
+        }
+        return { status: "error", message: "Bot bulunamadı!" };
+    }
+
+    // -------------------------------------
 
     getInventory(id) {
         const botInstance = this.bots.get(id);
