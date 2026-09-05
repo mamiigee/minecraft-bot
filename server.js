@@ -152,7 +152,7 @@ app.get('/', (req, res) => {
                             </div>
 
                             <div class="card">
-                                <h3>Bot Hareket ve Eylem Kontrolleri</h3>
+                                <h3>Bot Hareket Kontrolleri</h3>
                                 <div class="dpad">
                                     <div></div>
                                     <button class="control-btn" onmousedown="sendControl('\${id}', 'forward', true)" onmouseup="sendControl('\${id}', 'forward', false)" onmouseleave="sendControl('\${id}', 'forward', false)">İleri</button>
@@ -166,8 +166,6 @@ app.get('/', (req, res) => {
                                 </div>
                                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
                                     <button class="control-btn" onmousedown="sendControl('\${id}', 'sneak', true)" onmouseup="sendControl('\${id}', 'sneak', false)" onmouseleave="sendControl('\${id}', 'sneak', false)">Eğil (Sneak)</button>
-                                    <button class="control-btn" onclick="sendAction('\${id}', 'dig')" style="background: #e91e63;">Blok Kır</button>
-                                    <button class="control-btn" onclick="sendAction('\${id}', 'place')" style="background: #9c27b0;">Blok Koy</button>
                                     <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
                                 </div>
                             </div>
@@ -239,14 +237,6 @@ app.get('/', (req, res) => {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ id })
-                    });
-                }
-
-                async function sendAction(id, action) {
-                    await fetch('/action', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ id, action })
                     });
                 }
 
@@ -378,18 +368,6 @@ app.post('/jump', (req, res) => {
     res.json(result);
 });
 
-// --- YENİ EYLEM ENDPOINT'İ (Kır ve Koy) ---
-app.post('/action', (req, res) => {
-    const { id, action } = req.body;
-    let result;
-    if (action === 'dig') {
-        result = manager.digBlock ? manager.digBlock(id) : { status: "error", message: "digBlock fonksiyonu bot.js içinde tanımlı değil!" };
-    } else if (action === 'place') {
-        result = manager.placeBlock ? manager.placeBlock(id) : { status: "error", message: "placeBlock fonksiyonu bot.js içinde tanımlı değil!" };
-    }
-    res.json(result || { status: "error", message: "Bilinmeyen eylem!" });
-});
-
 app.post('/clear-controls', (req, res) => {
     const { id } = req.body;
     const result = manager.clearControls(id);
@@ -422,6 +400,7 @@ app.post('/chat', (req, res) => {
     }
 });
 
-server.listen(8080, () => {
-    console.log('Panel çalışıyor: http://localhost:8080');
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    console.log(`Panel çalışıyor: http://localhost:${PORT}`);
 });
