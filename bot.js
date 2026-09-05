@@ -179,11 +179,17 @@ class AFKBotManager {
     getInventory(id) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.inventory) {
-            return botInstance.bot.inventory.items().map(item => ({
-                name: item.name,
-                count: item.count,
-                slot: item.slot
-            }));
+            let slots = {};
+            for (let i = 9; i <= 44; i++) {
+                const item = botInstance.bot.inventory.slots[i];
+                if (item) {
+                    slots[i] = {
+                        name: item.name,
+                        count: item.count
+                    };
+                }
+            }
+            return slots;
         }
         return null;
     }
