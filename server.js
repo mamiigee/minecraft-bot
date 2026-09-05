@@ -18,7 +18,7 @@ console.log = function(...args) {
     if (match) {
         const botId = match[1];
         const cleanText = text.replace(`[BOT:${botId}]`, '').trim();
-        io.to(botId).emit('chatMessage', cleanText);
+        io.to(botId).emit('chatMessage', { botId, text: cleanText });
     }
 };
 
@@ -68,7 +68,7 @@ app.get('/', (req, res) => {
             <script>
                 const socket = io();
                 let bots = {};
-                let chatHistories = {}; // Her botun sohbet geçmişini burada saklayacağız
+                let chatHistories = {};
                 let currentActiveBot = null;
 
                 function showAddBotForm() {
@@ -167,7 +167,6 @@ app.get('/', (req, res) => {
                         </div>
                     \`;
 
-                    // Eğer bu botun daha önce biriken yazıları varsa ekrana geri bas
                     const chatBox = document.getElementById('chatBox');
                     if (chatHistories[id]) {
                         chatBox.innerHTML = chatHistories[id];
@@ -177,19 +176,21 @@ app.get('/', (req, res) => {
                     socket.emit('joinBotRoom', id);
                 }
 
-                // Global socket dinleyicisi (Tek sefer tanımlanır, gelen mesajı ilgili botun hafızasına ve ekranına işler)
+                // Gelen mesajları doğrudan doğruya ilgili botun geçmişine ve ekranına işliyoruz
                 socket.off('chatMessage');
-                socket.on('chatMessage', function(msg) {
-                    if (!currentActiveBot) return;
-                    if (!chatHistories[currentActiveBot]) {
-                        chatHistories[currentActiveBot] = '';
+                socket.on('chatMessage', function(data) {
+                    const { botId, text } = data;
+                    if (!chatHistories[botId]) {
+                        chatHistories[botId] = '';
                     }
-                    chatHistories[currentActiveBot] += msg + "\\n";
+                    chatHistories[botId] += text + "\\n";
                     
-                    const chatBox = document.getElementById('chatBox');
-                    if(chatBox) {
-                        chatBox.innerHTML = chatHistories[currentActiveBot];
-                        chatBox.scrollTop = chatBox.scrollHeight;
+                    if (currentActiveBot === botId) {
+                        const chatBox = document.getElementById('chatBox');
+                        if(chatBox) {
+                            chatBox.innerHTML = chatHistories[botId];
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
                     }
                 });
 
@@ -210,7 +211,7 @@ app.get('/', (req, res) => {
                     let json = await res.json();
                     alert(json.message);
                     delete bots[id];
-                    delete chatHistories[id]; // Hafızadan da temizle
+                    delete chatHistories[id];
                     updateBotList();
                     showAddBotForm();
                 }
