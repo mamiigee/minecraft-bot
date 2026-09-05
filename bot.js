@@ -1,127 +1,229 @@
 const mineflayer = require('mineflayer');
+const fs = require('fs');
 
 class AFKBotManager {
     constructor() {
-        this.bots = {};
-        this.botConfigs = {};
-        this.intervals = {};
+        this.bots = new Map();
+        this.dataFile = './bots.json';
+        this.loadAndRestartSavedBots();
     }
 
-    startBot(id, username, host, port, version = "1.20.1", startupCommands = "", recurringMsg = "", recurringInterval = 60, autoReconnect = true) {
-        if (this.bots[id]) {
-            return { status: "error", message: `"${id}" ID'li bot zaten çalışıyor!` };
+    saveBots() {
+        let list = {};
+        for (let [id, b] of this.bots) {
+            list[id] = {
+                username: b.username,
+                host: b.host,
+                port: b.port,
+                version: b.version,
+                startupCommands: b.startupCommands,
+                recurringMsg: b.recurringMsg,
+                recurringInterval: b.recurringInterval
+            };
+        }
+        fs.writeFileSync(this.dataFile, JSON.stringify(list, null, 2));
+    }
+
+    loadAndRestartSavedBots() {
+        try {
+            if (fs.existsSync(this.dataFile)) {
+                let data = fs.readFileSync(this.dataFile, 'utf8');
+                let savedBots = JSON.parse(data);
+                for (let id in savedBots) {
+                    let b = savedBots[id];
+                    console.log(`[System] Kayıtlı bot yükleniyor ve başlatılıyor: ${id}`);
+                    this.startBot(id, b.username, b.host, b.port, b.version, b.startupCommands, b.recurringMsg, b.recurringInterval, false);
+                }
+            }
+        } catch (e) {
+            console.log("Kayıtlı botlar yüklenirken hata:", e);
+        }
+    }
+
+    startBot(id, username, host, port, version, startupCommands, recurringMsg, recurringInterval, shouldSave = true) {
+        if (this.bots.has(id)) {
+            this.stopBot(id);
         }
 
-        this.botConfigs[id] = { username, host, port, version, startupCommands, recurringMsg, recurringInterval, autoReconnect };
+        const botData = {
+            username,
+            host,
+            port: parseInt(port),
+            version,
+            startupCommands,
+            recurringMsg,
+            recurringInterval: parseInt(recurringInterval),
+            bot: null,
+            loopTimer: null,
+            reconnectTimeout: null
+        };
 
-        const bot = mineflayer.createBot({
-            host: host,
-            port: parseInt(port) || 25565,
-            username: username,
-            version: version
-        });
+        this.bots.set(id, botData);
+        if (shouldSave) {
+            this.saveBots();
+        }
 
-        bot.on('spawn', () => {
-            console.log(`[BOT:${id}] [Sistem] ${username} sunucuya başarıyla giriş yaptı!`);
+        this.connectBot(id);
+        return { status: "success", message: `Bot (${id}) başlatıldı ve kaydedildi!` };
+    }
 
-            if (startupCommands && startupCommands.trim() !== '') {
-                const commands = startupCommands.split(',').map(c => c.trim());
-                let delay = 2500;
-                commands.forEach((cmd) => {
-                    setTimeout(() => {
-                        if (this.bots[id]) {
-                            try {
-                                this.bots[id].chat(cmd);
-                                console.log(`[BOT:${id}] [Komut] ${cmd}`);
-                            } catch (e) {
-                                console.log(`[BOT:${id}] [Hata] ${e.message}`);
-                            }
+    connectBot(id) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance) return;
+
+        console.log(`[BOT:${id}] Bağlanılıyor: ${botInstance.host}:${botInstance.port} (${botInstance.username})`);
+
+        try {
+            botInstance.bot = mineflayer.createBot({
+                host: botInstance.host,
+                port: botInstance.port,
+                username: botInstance.username,
+                version: botInstance.version
+            });
+
+            botInstance.bot.on('spawn', () => {
+                console.log(`[BOT:${id}] Oyuna giriş yapıldı!`);
+                
+                if (botInstance.startupCommands) {
+                    const cmds = botInstance.startupCommands.split(',').map(c => c.trim());
+                    let delay = 1000;
+                    cmds.forEach(cmd => {
+                        if (cmd) {
+                            setTimeout(() => {
+                                if (botInstance.bot && botInstance.bot.chat) {
+                                    botInstance.bot.chat(cmd);
+                                    console.log(`[BOT:${id}] Komut gönderildi: ${cmd}`);
+                                }
+                            }, delay);
+                            delay += 1500;
                         }
-                    }, delay);
-                    delay += 1500;
-                });
-            }
+                    });
+                }
 
-            if (recurringMsg && recurringMsg.trim() !== '' && recurringInterval > 0) {
-                if (this.intervals[id]) clearInterval(this.intervals[id]);
-                this.intervals[id] = setInterval(() => {
-                    if (this.bots[id]) {
-                        try {
-                            this.bots[id].chat(recurringMsg);
-                            console.log(`[BOT:${id}] [Tekrarlayan] ${recurringMsg}`);
-                        } catch (e) {}
-                    }
-                }, parseInt(recurringInterval) * 1000);
-            }
-        });
+                if (botInstance.recurringMsg && botInstance.recurringInterval > 0) {
+                    if (botInstance.loopTimer) clearInterval(botInstance.loopTimer);
+                    botInstance.loopTimer = setInterval(() => {
+                        if (botInstance.bot && botInstance.bot.chat) {
+                            botInstance.bot.chat(botInstance.recurringMsg);
+                            console.log(`[BOT:${id}] [Loop] Mesaj gönderildi: ${botInstance.recurringMsg}`);
+                        }
+                    }, botInstance.recurringInterval * 1000);
+                }
+            });
 
-        bot.on('message', (jsonMsg) => {
-            const text = jsonMsg.toAnsi ? jsonMsg.toAnsi() : jsonMsg.toString();
-            if (text && text.trim() !== '') {
-                console.log(`[BOT:${id}] ${text}`);
-            }
-        });
+            botInstance.bot.on('chat', (username, message) => {
+                if (username === botInstance.bot.username) return;
+                console.log(`[BOT:${id}] [Chat] <${username}> ${message}`);
+            });
 
-        bot.on('chat', (user, message) => {
-            if (user !== username) {
-                console.log(`[BOT:${id}] <${user}> ${message}`);
-            }
-        });
+            botInstance.bot.on('kicked', (reason) => {
+                console.log(`[BOT:${id}] Sunucudan atıldı: ${reason}`);
+                this.cleanupBot(id);
+                this.scheduleReconnect(id);
+            });
 
-        bot.on('error', (err) => {
-            console.log(`[BOT:${id}] [Hata]: ${err.message}`);
-        });
+            botInstance.bot.on('end', (reason) => {
+                console.log(`[BOT:${id}] Bağlantı koptu (end): ${reason}`);
+                this.cleanupBot(id);
+                this.scheduleReconnect(id);
+            });
 
-        bot.on('end', (reason) => {
-            console.log(`[BOT:${id}] [Koptu] Ayrıldı: ${reason}`);
-            if (this.intervals[id]) {
-                clearInterval(this.intervals[id]);
-                delete this.intervals[id];
-            }
-            delete this.bots[id];
+            botInstance.bot.on('error', (err) => {
+                console.log(`[BOT:${id}] Hata oluştu: ${err.message}`);
+            });
 
-            const config = this.botConfigs[id];
-            if (config && config.autoReconnect) {
-                console.log(`[BOT:${id}] [Sistem] 5 saniye sonra yeniden bağlanılıyor...`);
-                setTimeout(() => {
-                    if (!this.bots[id]) {
-                        this.startBot(id, config.username, config.host, config.port, config.version, config.startupCommands, config.recurringMsg, config.recurringInterval, config.autoReconnect);
-                    }
-                }, 5000);
-            }
-        });
-
-        this.bots[id] = bot;
-        return { status: "success", message: `${username} (${id}) başlatılıyor...` };
+        } catch (e) {
+            console.log(`[BOT:${id}] Bağlantı hatası: ${e.message}`);
+            this.scheduleReconnect(id);
+        }
     }
 
-    stopBot(id) {
-        if (this.botConfigs[id]) {
-            this.botConfigs[id].autoReconnect = false;
+    cleanupBot(id) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance) return;
+        if (botInstance.loopTimer) {
+            clearInterval(botInstance.loopTimer);
+            botInstance.loopTimer = null;
         }
-        if (this.intervals[id]) {
-            clearInterval(this.intervals[id]);
-            delete this.intervals[id];
+    }
+
+    scheduleReconnect(id) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance) return;
+        if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
+
+        console.log(`[BOT:${id}] 10 saniye sonra yeniden bağlanılacak...`);
+        botInstance.reconnectTimeout = setTimeout(() => {
+            this.connectBot(id);
+        }, 10000);
+    }
+
+    setLoop(id, message, interval) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance) return false;
+
+        botInstance.recurringMsg = message;
+        botInstance.recurringInterval = parseInt(interval);
+        this.saveBots();
+
+        if (botInstance.loopTimer) {
+            clearInterval(botInstance.loopTimer);
+            botInstance.loopTimer = null;
         }
-        if (this.bots[id]) {
-            this.bots[id].quit();
-            delete this.bots[id];
-            return { status: "success", message: `Bot (${id}) durduruldu.` };
+
+        if (message && botInstance.recurringInterval > 0) {
+            botInstance.loopTimer = setInterval(() => {
+                if (botInstance.bot && botInstance.bot.chat) {
+                    botInstance.bot.chat(message);
+                    console.log(`[BOT:${id}] [Loop] Mesaj gönderildi: ${message}`);
+                }
+            }, botInstance.recurringInterval * 1000);
         }
-        return { status: "error", message: "Aktif bot bulunamadı!" };
+        return true;
     }
 
     sendMessage(id, message) {
-        if (this.bots[id]) {
-            try {
-                this.bots[id].chat(message);
-                console.log(`[BOT:${id}] [Manuel] ${message}`);
-                return true;
-            } catch (e) {
-                return false;
-            }
+        const botInstance = this.bots.get(id);
+        if (botInstance && botInstance.bot && botInstance.bot.chat) {
+            botInstance.bot.chat(message);
+            console.log(`[BOT:${id}] [Manuel] ${message}`);
+            return true;
         }
         return false;
+    }
+
+    stopBot(id) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance) return { status: "error", message: "Bot bulunamadı!" };
+
+        if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
+        if (botInstance.loopTimer) clearInterval(botInstance.loopTimer);
+        if (botInstance.bot) {
+            try {
+                botInstance.bot.quit();
+            } catch(e) {}
+        }
+
+        this.bots.delete(id);
+        this.saveBots();
+        console.log(`[BOT:${id}] Bot tamamen durduruldu ve silindi.`);
+        return { status: "success", message: `Bot (${id}) durduruldu!` };
+    }
+
+    getActiveBots() {
+        let list = {};
+        for (let [id, b] of this.bots) {
+            list[id] = {
+                username: b.username,
+                host: b.host,
+                port: b.port,
+                version: b.version,
+                startupCommands: b.startupCommands,
+                recurringMsg: b.recurringMsg,
+                recurringInterval: b.recurringInterval
+            };
+        }
+        return list;
     }
 }
 
