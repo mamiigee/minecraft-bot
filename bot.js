@@ -102,20 +102,41 @@ class AFKBotManager {
                 }
             });
 
-            // Gelen tüm mesajları ve JSON yapılarını detaylı yakala
+            // Modern Oyuncu Sohbet Olayı
+            botInstance.bot.on('playerChat', (username, translatedMessage, message, jsonMsg) => {
+                const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
+                console.log(`[BOT:${id}] ${formatted}`);
+            });
+
+            // Klasik Oyuncu Sohbet Olayı
+            botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
+                const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
+                console.log(`[BOT:${id}] ${formatted}`);
+            });
+
+            // Gelişmiş JSON ve Sistem Mesajı Ayrıştırıcısı
             botInstance.bot.on('message', (jsonMsg, position) => {
                 if (position === 2) return; // Action bar mesajlarını yoksay
-                
-                let text = jsonMsg.toString();
-                if (!text || text.trim() === '') return;
 
-                // Eğer mesajın içinde JSON yapısı (ekstra elementler) varsa inceleyelim
-                if (jsonMsg.json && jsonMsg.json.extra) {
-                    // Sunucu eklentisinin gönderdiği ham yapı bazen buradadır
-                    // console.log("JSON Yapısı:", JSON.stringify(jsonMsg.json));
+                let outputText = '';
+
+                try {
+                    // Minecraft standart sohbet çeviri kalıbı (Gönderen ve Mesajı ayırır)
+                    if (jsonMsg.translate === 'chat.type.text' && jsonMsg.with && jsonMsg.with.length >= 2) {
+                        const sender = jsonMsg.with[0] ? jsonMsg.with[0].toString() : '';
+                        const msg = jsonMsg.with[1] ? jsonMsg.with[1].toString() : '';
+                        outputText = sender ? `<${sender}> ${msg}` : msg;
+                    } else {
+                        // Özel eklenti çıktıları, rütbeler ve düz metinler
+                        outputText = jsonMsg.toString();
+                    }
+                } catch (e) {
+                    outputText = jsonMsg.toString();
                 }
 
-                console.log(`[BOT:${id}] ${text}`);
+                if (outputText && outputText.trim() !== '') {
+                    console.log(`[BOT:${id}] ${outputText}`);
+                }
             });
 
             botInstance.bot.on('kicked', (reason) => {
