@@ -64,39 +64,58 @@ class AFKBotManager {
         return { status: "success", message: `Bot (${id}) başlatıldı ve kaydedildi!` };
     }
 
-    // İç içe geçmiş Minecraft JSON chat bileşenlerini temiz düz metne çeviren fonksiyon
+    escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     parseMinecraftJson(obj) {
         if (!obj) return '';
-        if (typeof obj === 'string') return obj;
+        if (typeof obj === 'string') return this.escapeHtml(obj);
         if (typeof obj === 'number') return obj.toString();
 
-        let result = '';
+        let html = '';
 
-        // Eğer 'text' alanı varsa ekle
-        if (typeof obj.text === 'string') {
-            result += obj.text;
-        }
-
-        // Eğer 'translate' ve 'with' yapıları varsa (HanedanMC tarzı chat/duyurular)
-        if (obj.with && Array.isArray(obj.with)) {
+        if (obj.translate && obj.with && Array.isArray(obj.with)) {
             for (let item of obj.with) {
-                result += this.parseMinecraftJson(item);
+                html += this.parseMinecraftJson(item);
+            }
+        } else {
+            if (typeof obj.text === 'string' && obj.text !== '') {
+                html += this.escapeHtml(obj.text);
+            }
+            if (obj.extra && Array.isArray(obj.extra)) {
+                for (let item of obj.extra) {
+                    html += this.parseMinecraftJson(item);
+                }
             }
         }
 
-        // Eğer 'extra' dizisi varsa alt elementleri ekle
-        if (obj.extra && Array.isArray(obj.extra)) {
-            for (let item of obj.extra) {
-                result += this.parseMinecraftJson(item);
-            }
-        }
-
-        // Eğer içinde gömülü başka bir 'json' objesi varsa
         if (obj.json) {
-            result += this.parseMinecraftJson(obj.json);
+            html += this.parseMinecraftJson(obj.json);
         }
 
-        return result;
+        if (obj.color && html) {
+            let color = obj.color;
+            let cssColor = color;
+            const mcColors = {
+                'black': '#000000', 'dark_blue': '#0000AA', 'dark_green': '#00AA00',
+                'dark_aqua': '#00AAAA', 'dark_red': '#AA0000', 'dark_purple': '#AA00AA',
+                'gold': '#FFAA00', 'gray': '#AAAAAA', 'dark_gray': '#555555',
+                'blue': '#5555FF', 'green': '#55FF55', 'aqua': '#55FFFF',
+                'red': '#FF5555', 'light_purple': '#FF55FF', 'yellow': '#FFFF55', 'white': '#FFFFFF'
+            };
+            if (mcColors[color]) {
+                cssColor = mcColors[color];
+            }
+            return `<span style="color: ${cssColor};">${html}</span>`;
+        }
+
+        return html;
     }
 
     connectBot(id) {
@@ -137,20 +156,18 @@ class AFKBotManager {
                 }
             });
 
-            // Modern ve Klasik Sohbet Olayları
             botInstance.bot.on('playerChat', (username, translatedMessage, message, jsonMsg) => {
-                const formatted = jsonMsg ? this.parseMinecraftJson(jsonMsg) : `<${username}> ${message}`;
+                const formatted = jsonMsg ? this.parseMinecraftJson(jsonMsg) : this.escapeHtml(`<${username}> ${message}`);
                 if (formatted.trim()) console.log(`[BOT:${id}] ${formatted}`);
             });
 
             botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
-                const formatted = jsonMsg ? this.parseMinecraftJson(jsonMsg) : `<${username}> ${message}`;
+                const formatted = jsonMsg ? this.parseMinecraftJson(jsonMsg) : this.escapeHtml(`<${username}> ${message}`);
                 if (formatted.trim()) console.log(`[BOT:${id}] ${formatted}`);
             });
 
-            // Sistem Mesajları ve Özel Eklenti Çıktıları
             botInstance.bot.on('message', (jsonMsg, position) => {
-                if (position === 2) return; // Action bar yoksay
+                if (position === 2) return;
 
                 let text = this.parseMinecraftJson(jsonMsg);
                 if (text && text.trim() !== '') {
@@ -221,7 +238,7 @@ class AFKBotManager {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.chat) {
             botInstance.bot.chat(message);
-            console.log(`[BOT:${id}] [Sen]: ${message}`);
+            console.log(`[BOT:${id}] [Sen]: ${this.escapeHtml(message)}`);
             return true;
         }
         return false;
@@ -258,7 +275,7 @@ class AFKBotManager {
         }
 
         this.bots.delete(id);
-        this.saveBots();
+        this.save_bots = this.saveBots();
         return { status: "success", message: `Bot (${id}) durduruldu!` };
     }
 
