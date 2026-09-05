@@ -102,16 +102,12 @@ class AFKBotManager {
                 }
             });
 
-            // Sunucudaki oyuncu mesajlarını, rütbeleri ve duyuruları eksiksiz yakala
-            botInstance.bot.on('messagestr', (message) => {
+            // JSON bileşenlerini tam metne (rütbe, isim ve mesaj dahil) dönüştür
+            botInstance.bot.on('messagestr', (message, position, jsonMsg) => {
                 if (message && message.trim() !== '') {
-                    console.log(`[BOT:${id}] ${message}`);
+                    const fullText = jsonMsg ? jsonMsg.toString() : message;
+                    console.log(`[BOT:${id}] ${fullText}`);
                 }
-            });
-
-            botInstance.bot.on('whisper', (username, message, translate, jsonMsg) => {
-                const fullText = jsonMsg ? jsonMsg.toString() : `[Fısıltı] <${username}> ${message}`;
-                console.log(`[BOT:${id}] ${fullText}`);
             });
 
             botInstance.bot.on('kicked', (reason) => {
