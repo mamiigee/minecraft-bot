@@ -1,5 +1,6 @@
 const mineflayer = require('mineflayer');
 const fs = require('fs');
+const vec = require('vec3');
 
 class AFKBotManager {
     constructor() {
@@ -102,24 +103,20 @@ class AFKBotManager {
                 }
             });
 
-            // Modern Oyuncu Sohbet Olayı
             botInstance.bot.on('playerChat', (username, translatedMessage, message, jsonMsg) => {
                 const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
                 console.log(`[BOT:${id}] ${formatted}`);
             });
 
-            // Klasik Oyuncu Sohbet Olayı
             botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
                 const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
                 console.log(`[BOT:${id}] ${formatted}`);
             });
 
-            // Gelişmiş JSON ve Sistem Mesajı Ayrıştırıcısı
             botInstance.bot.on('message', (jsonMsg, position) => {
-                if (position === 2) return; // Action bar mesajlarını yoksay
+                if (position === 2) return;
 
                 let outputText = '';
-
                 try {
                     if (jsonMsg.translate === 'chat.type.text' && jsonMsg.with && jsonMsg.with.length >= 2) {
                         const sender = jsonMsg.with[0] ? jsonMsg.with[0].toString() : '';
@@ -207,8 +204,7 @@ class AFKBotManager {
     }
 
     // --- HAREKET VE KONTROL ÖZELLİKLERİ ---
-    
-    // Yön veya eylemleri başlatma / durdurma ('forward', 'back', 'left', 'right', 'jump', 'sneak', 'sprint')
+
     setControlState(id, control, status) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.setControlState) {
@@ -221,7 +217,6 @@ class AFKBotManager {
         return { status: "error", message: "Bot bulunamadı veya geçersiz kontrol!" };
     }
 
-    // Tek seferlik zıplama komutu
     jump(id) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot) {
@@ -236,7 +231,6 @@ class AFKBotManager {
         return { status: "error", message: "Bot bulunamadı!" };
     }
 
-    // Tüm hareketleri durdurma
     clearControls(id) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.clearControlStates) {
@@ -244,6 +238,56 @@ class AFKBotManager {
             return { status: "success", message: `Bot (${id}) hareketleri durduruldu.` };
         }
         return { status: "error", message: "Bot bulunamadı!" };
+    }
+
+    // --- BLOK KIR VE KOY ÖZELLİKLERİ ---
+
+    digBlock(id) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance || !botInstance.bot) {
+            return { status: "error", message: "Bot bulunamadı!" };
+        }
+        try {
+            const targetBlock = botInstance.bot.blockAtCursor(4);
+            if (targetBlock && targetBlock.name !== 'air') {
+                botInstance.bot.dig(targetBlock, (err) => {
+                    if (err) {
+                        console.log(`[BOT:${id}] Kazma hatası: ${err.message}`);
+                    } else {
+                        console.log(`[BOT:${id}] Blok başarıyla kırıldı: ${targetBlock.name}`);
+                    }
+                });
+                return { status: "success", message: `${targetBlock.name} kazılıyor...` };
+            } else {
+                return { status: "error", message: "Önünde kırılacak blok yok!" };
+            }
+        } catch (e) {
+            return { status: "error", message: e.message };
+        }
+    }
+
+    placeBlock(id) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance || !botInstance.bot) {
+            return { status: "error", message: "Bot bulunamadı!" };
+        }
+        try {
+            const referenceBlock = botInstance.bot.blockAtCursor(4);
+            if (!referenceBlock || referenceBlock.name === 'air') {
+                return { status: "error", message: "Konulacak geçerli bir hedef blok bulunamadı!" };
+            }
+
+            botInstance.bot.placeBlock(referenceBlock, new vec(0, 1, 0), (err) => {
+                if (err) {
+                    console.log(`[BOT:${id}] Blok koyma hatası: ${err.message}`);
+                } else {
+                    console.log(`[BOT:${id}] Blok başarıyla konuldu.`);
+                }
+            });
+            return { status: "success", message: "Blok koyuluyor..." };
+        } catch (e) {
+            return { status: "error", message: e.message };
+        }
     }
 
     // -------------------------------------
