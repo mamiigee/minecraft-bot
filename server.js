@@ -212,9 +212,11 @@ app.get('/', (req, res) => {
                         for(let i = 9; i <= 44; i++) {
                             let item = json.items[i];
                             if(item) {
-                                html += \`<div title="\${item.name} (Adet: \${item.count})" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; font-size: 9px; cursor: pointer;">
-                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28px; color: #fff;">\${item.name.substring(0,3)}</span>
-                                    <span style="position: absolute; bottom: 1px; right: 2px; color: #ff5555; font-weight: bold; font-size: 10px;">\${item.count > 1 ? item.count : ''}</span>
+                                let iconUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/item/\${item.name}.png\`;
+                                html += \`<div title="\${item.name} (Adet: \${item.count})" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer;">
+                                    <img src="\${iconUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="width: 24px; height: 24px; image-rendering: pixelated;" />
+                                    <span style="display: none; font-size: 8px; color: #fff; text-align: center; overflow: hidden; width: 28px; word-break: break-all;">\${item.name.substring(0,3)}</span>
+                                    <span style="position: absolute; bottom: 0px; right: 2px; color: #ffff55; font-weight: bold; font-size: 10px; text-shadow: 1px 1px #000;">\${item.count > 1 ? item.count : ''}</span>
                                 </div>\`;
                             } else {
                                 html += \`<div style="width: 32px; height: 32px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;"></div>\`;
