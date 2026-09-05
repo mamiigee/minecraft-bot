@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
             <style>
                 body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; height: 95vh; box-sizing: border-box; }
                 .sidebar { width: 260px; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #333; overflow-y: auto; }
-                .main-content { flex: 1; display: flex; gap: 20px; background: #181818; padding: 20px; border-radius: 8px; border: 1px solid #333; }
+                .main-content { flex: 1; display: flex; gap: 20px; background: #181818; padding: 20px; border-radius: 8px; border: 1px solid #333; overflow-y: auto; }
                 .bot-form-panel { flex: 1; overflow-y: auto; padding-right: 10px; }
                 .chat-panel { flex: 1; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; }
                 .card { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; }
@@ -41,13 +41,16 @@ app.get('/', (req, res) => {
                 button.stop { background: #f44336; }
                 button.chat-btn { background: #2196F3; }
                 button.loop-btn { background: #ff9800; }
+                button.control-btn { background: #607D8B; transition: 0.1s; }
+                button.control-btn:active, button.control-btn.active { background: #00BCD4; }
                 .bot-tab { padding: 10px; background: #2a2a2a; border-radius: 6px; cursor: pointer; border: 1px solid #444; text-align: center; font-weight: bold; transition: 0.2s; }
                 .bot-tab:hover, .bot-tab.active { background: #4CAF50; border-color: #66BB6A; }
                 .add-btn { background: #ff9800; }
                 #chatBox { background: #000; border: 1px solid #333; flex: 1; border-radius: 5px; padding: 12px; overflow-y: scroll; font-family: 'Courier New', Courier, monospace; color: #00ff00; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
                 h2, h3 { margin-top: 0; color: #4CAF50; }
                 label { font-size: 12px; color: #aaa; display: block; margin-top: 5px; }
-                .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; text-align: center; }
+                .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; text-align: center; width: 100%; }
+                .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px; margin: 10px auto; }
             </style>
             <script src="/socket.io/socket.io.js"></script>
         </head>
@@ -147,6 +150,26 @@ app.get('/', (req, res) => {
                                 <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
                                 <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
                             </div>
+
+                            <div class="card">
+                                <h3>Bot Hareket Kontrolleri</h3>
+                                <div class="dpad">
+                                    <div></div>
+                                    <button class="control-btn" onmousedown="sendControl('\${id}', 'forward', true)" onmouseup="sendControl('\{id}', 'forward', false)">İleri</button>
+                                    <div></div>
+                                    <button class="control-btn" onmousedown="sendControl('\${id}', 'left', true)" onmouseup="sendControl('\${id}', 'left', false)">Sol</button>
+                                    <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
+                                    <button class="control-btn" onmousedown="sendControl('\${id}', 'right', true)" onmouseup="sendControl('\${id}', 'right', false)">Sağ</button>
+                                    <div></div>
+                                    <button class="control-btn" onmousedown="sendControl('\${id}', 'back', true)" onmouseup="sendControl('\${id}', 'back', false)">Geri</button>
+                                    <div></div>
+                                </div>
+                                <div style="display: flex; gap: 5px; margin-top: 8px;">
+                                    <button class="control-btn" onmousedown="sendControl('\${id}', 'sneak', true)" onmouseup="sendControl('\${id}', 'sneak', false)">Eğil (Sneak)</button>
+                                    <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
+                                </div>
+                            </div>
+
                             <div class="card">
                                 <h3>Bot Envanteri (Görsel Izgara)</h3>
                                 <button class="chat-btn" onclick="loadInventory('\${id}')">Envanteri Yenile</button>
@@ -200,6 +223,30 @@ app.get('/', (req, res) => {
                         }
                     }
                 });
+
+                async function sendControl(id, control, status) {
+                    await fetch('/control', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id, control, status })
+                    });
+                }
+
+                async function sendJump(id) {
+                    await fetch('/jump', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id })
+                    });
+                }
+
+                async function clearBotControls(id) {
+                    await fetch('/clear-controls', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id })
+                    });
+                }
 
                 async function loadInventory(id) {
                     let res = await fetch('/inventory/' + id);
@@ -308,6 +355,26 @@ app.post('/start', (req, res) => {
     const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg, recurringInterval, true);
     res.json(result);
 });
+
+// --- YENİ HAREKET ENDPOINT'LERİ ---
+app.post('/control', (req, res) => {
+    const { id, control, status } = req.body;
+    const result = manager.setControlState(id, control, status);
+    res.json(result);
+});
+
+app.post('/jump', (req, res) => {
+    const { id } = req.body;
+    const result = manager.jump(id);
+    res.json(result);
+});
+
+app.post('/clear-controls', (req, res) => {
+    const { id } = req.body;
+    const result = manager.clearControls(id);
+    res.json(result);
+});
+// ---------------------------------
 
 app.post('/loop', (req, res) => {
     const { id, message, interval } = req.body;
