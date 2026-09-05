@@ -212,9 +212,11 @@ app.get('/', (req, res) => {
                         for(let i = 9; i <= 44; i++) {
                             let item = json.items[i];
                             if(item) {
-                                let iconUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/item/\${item.name}.png\`;
+                                let itemUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/item/\${item.name}.png\`;
+                                let blockUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/block/\${item.name}.png\`;
+                                
                                 html += \`<div title="\${item.name} (Adet: \${item.count})" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer;">
-                                    <img src="\${iconUrl}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="width: 24px; height: 24px; image-rendering: pixelated;" />
+                                    <img src="\${itemUrl}" onerror="if(this.src.includes('/item/')) { this.src='\${blockUrl}'; } else { this.style.display='none'; this.nextElementSibling.style.display='block'; }" style="width: 24px; height: 24px; image-rendering: pixelated;" />
                                     <span style="display: none; font-size: 8px; color: #fff; text-align: center; overflow: hidden; width: 28px; word-break: break-all;">\${item.name.substring(0,3)}</span>
                                     <span style="position: absolute; bottom: 0px; right: 2px; color: #ffff55; font-weight: bold; font-size: 10px; text-shadow: 1px 1px #000;">\${item.count > 1 ? item.count : ''}</span>
                                 </div>\`;
