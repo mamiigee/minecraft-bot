@@ -64,6 +64,41 @@ class AFKBotManager {
         return { status: "success", message: `Bot (${id}) başlatıldı ve kaydedildi!` };
     }
 
+    // İç içe geçmiş Minecraft JSON chat bileşenlerini temiz düz metne çeviren fonksiyon
+    parseMinecraftJson(obj) {
+        if (!obj) return '';
+        if (typeof obj === 'string') return obj;
+        if (typeof obj === 'number') return obj.toString();
+
+        let result = '';
+
+        // Eğer 'text' alanı varsa ekle
+        if (typeof obj.text === 'string') {
+            result += obj.text;
+        }
+
+        // Eğer 'translate' ve 'with' yapıları varsa (HanedanMC tarzı chat/duyurular)
+        if (obj.with && Array.isArray(obj.with)) {
+            for (let item of obj.with) {
+                result += this.parseMinecraftJson(item);
+            }
+        }
+
+        // Eğer 'extra' dizisi varsa alt elementleri ekle
+        if (obj.extra && Array.isArray(obj.extra)) {
+            for (let item of obj.extra) {
+                result += this.parseMinecraftJson(item);
+            }
+        }
+
+        // Eğer içinde gömülü başka bir 'json' objesi varsa
+        if (obj.json) {
+            result += this.parseMinecraftJson(obj.json);
+        }
+
+        return result;
+    }
+
     connectBot(id) {
         const botInstance = this.bots.get(id);
         if (!botInstance) return;
@@ -104,32 +139,23 @@ class AFKBotManager {
 
             // Modern ve Klasik Sohbet Olayları
             botInstance.bot.on('playerChat', (username, translatedMessage, message, jsonMsg) => {
-                const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
-                console.log(`[BOT:${id}] ${formatted}`);
+                const formatted = jsonMsg ? this.parseMinecraftJson(jsonMsg) : `<${username}> ${message}`;
+                if (formatted.trim()) console.log(`[BOT:${id}] ${formatted}`);
             });
 
             botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
-                const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
-                console.log(`[BOT:${id}] ${formatted}`);
+                const formatted = jsonMsg ? this.parseMinecraftJson(jsonMsg) : `<${username}> ${message}`;
+                if (formatted.trim()) console.log(`[BOT:${id}] ${formatted}`);
             });
 
-            // Sistem Mesajları ve Ham JSON Yapısı Yakalayıcısı
+            // Sistem Mesajları ve Özel Eklenti Çıktıları
             botInstance.bot.on('message', (jsonMsg, position) => {
                 if (position === 2) return; // Action bar yoksay
 
-                let text = jsonMsg.toString();
-                if (!text || text.trim() === '') return;
-
-                // Gelen mesajın ham JSON yapısını konsola dökerek inceleyelim
-                try {
-                    const rawJson = JSON.stringify(jsonMsg);
-                    // Eğer mesajda konuşma yapısı varsa detaylı görelim
-                    if (rawJson.includes('extra') || rawJson.includes('translate')) {
-                        console.log(`[DEBUG-JSON] [BOT:${id}]`, rawJson);
-                    }
-                } catch (err) {}
-
-                console.log(`[BOT:${id}] ${text}`);
+                let text = this.parseMinecraftJson(jsonMsg);
+                if (text && text.trim() !== '') {
+                    console.log(`[BOT:${id}] ${text}`);
+                }
             });
 
             botInstance.bot.on('kicked', (reason) => {
