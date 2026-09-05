@@ -148,9 +148,11 @@ app.get('/', (req, res) => {
                                 <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
                             </div>
                             <div class="card">
-                                <h3>Bot Envanteri</h3>
-                                <button class="chat-btn" onclick="loadInventory('\${id}')">Envanteri Yenile / Göster</button>
-                                <div id="inventoryBox" style="margin-top: 10px; max-height: 150px; overflow-y: auto; font-size: 12px; background: #111; padding: 8px; border-radius: 4px; color: #ddd;">Envanteri görmek için butona basın.</div>
+                                <h3>Bot Envanteri (Görsel Izgara)</h3>
+                                <button class="chat-btn" onclick="loadInventory('\${id}')">Envanteri Yenile</button>
+                                <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #111; padding: 8px; border-radius: 6px; margin-top: 10px; max-width: fit-content;">
+                                    <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
+                                </div>
                             </div>
                             <div class="card">
                                 <h3>Anlık Mesaj Gönder</h3>
@@ -179,6 +181,7 @@ app.get('/', (req, res) => {
                     }
 
                     socket.emit('joinBotRoom', id);
+                    loadInventory(id);
                 }
 
                 socket.off('chatMessage');
@@ -201,20 +204,25 @@ app.get('/', (req, res) => {
                 async function loadInventory(id) {
                     let res = await fetch('/inventory/' + id);
                     let json = await res.json();
-                    const invBox = document.getElementById('inventoryBox');
+                    const grid = document.getElementById('inventoryGrid');
+                    if(!grid) return;
+
                     if(json.status === "success") {
-                        if(json.items.length === 0) {
-                            invBox.innerHTML = "Botun envanteri boş.";
-                            return;
+                        let html = '';
+                        for(let i = 9; i <= 44; i++) {
+                            let item = json.items[i];
+                            if(item) {
+                                html += \`<div title="\${item.name} (Adet: \${item.count})" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; font-size: 9px; cursor: pointer;">
+                                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28px; color: #fff;">\${item.name.substring(0,3)}</span>
+                                    <span style="position: absolute; bottom: 1px; right: 2px; color: #ff5555; font-weight: bold; font-size: 10px;">\${item.count > 1 ? item.count : ''}</span>
+                                </div>\`;
+                            } else {
+                                html += \`<div style="width: 32px; height: 32px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;"></div>\`;
+                            }
                         }
-                        let html = "<ul style='padding-left: 15px; margin: 0;'>";
-                        json.items.forEach(item => {
-                            html += \`<li><b>\${item.name}</b> (Adet: \${item.count})</li>\`;
-                        });
-                        html += "</ul>";
-                        invBox.innerHTML = html;
+                        grid.innerHTML = html;
                     } else {
-                        invBox.innerHTML = json.message;
+                        grid.innerHTML = \`<span style="color:red; font-size:11px; grid-column: span 9;">\${json.message}</span>\`;
                     }
                 }
 
@@ -287,7 +295,7 @@ app.get('/inventory/:id', (req, res) => {
     if (items) {
         res.json({ status: "success", items });
     } else {
-        res.json({ status: "error", message: "Bot aktif değil veya envantere ulaşılamıyor!" });
+        res.json({ status: "error", message: "Bot aktif değil!" });
     }
 });
 
