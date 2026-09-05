@@ -102,41 +102,34 @@ class AFKBotManager {
                 }
             });
 
-            // Modern Oyuncu Sohbet Olayı
+            // Modern ve Klasik Sohbet Olayları
             botInstance.bot.on('playerChat', (username, translatedMessage, message, jsonMsg) => {
                 const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
                 console.log(`[BOT:${id}] ${formatted}`);
             });
 
-            // Klasik Oyuncu Sohbet Olayı
             botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
                 const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
                 console.log(`[BOT:${id}] ${formatted}`);
             });
 
-            // Gelişmiş JSON ve Sistem Mesajı Ayrıştırıcısı
+            // Sistem Mesajları ve Ham JSON Yapısı Yakalayıcısı
             botInstance.bot.on('message', (jsonMsg, position) => {
-                if (position === 2) return; // Action bar mesajlarını yoksay
+                if (position === 2) return; // Action bar yoksay
 
-                let outputText = '';
+                let text = jsonMsg.toString();
+                if (!text || text.trim() === '') return;
 
+                // Gelen mesajın ham JSON yapısını konsola dökerek inceleyelim
                 try {
-                    // Minecraft standart sohbet çeviri kalıbı (Gönderen ve Mesajı ayırır)
-                    if (jsonMsg.translate === 'chat.type.text' && jsonMsg.with && jsonMsg.with.length >= 2) {
-                        const sender = jsonMsg.with[0] ? jsonMsg.with[0].toString() : '';
-                        const msg = jsonMsg.with[1] ? jsonMsg.with[1].toString() : '';
-                        outputText = sender ? `<${sender}> ${msg}` : msg;
-                    } else {
-                        // Özel eklenti çıktıları, rütbeler ve düz metinler
-                        outputText = jsonMsg.toString();
+                    const rawJson = JSON.stringify(jsonMsg);
+                    // Eğer mesajda konuşma yapısı varsa detaylı görelim
+                    if (rawJson.includes('extra') || rawJson.includes('translate')) {
+                        console.log(`[DEBUG-JSON] [BOT:${id}]`, rawJson);
                     }
-                } catch (e) {
-                    outputText = jsonMsg.toString();
-                }
+                } catch (err) {}
 
-                if (outputText && outputText.trim() !== '') {
-                    console.log(`[BOT:${id}] ${outputText}`);
-                }
+                console.log(`[BOT:${id}] ${text}`);
             });
 
             botInstance.bot.on('kicked', (reason) => {
