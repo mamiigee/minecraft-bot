@@ -102,7 +102,6 @@ class AFKBotManager {
                 }
             });
 
-            // Sadece oyun içi mesajlar ve sohbetler konsola yansıtılır
             botInstance.bot.on('messagestr', (message) => {
                 if (!message) return;
                 console.log(`[BOT:${id}] ${message}`);
@@ -139,7 +138,6 @@ class AFKBotManager {
         if (!botInstance) return;
         if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
 
-        // Proxy çakışması (zaten bağlı hatası) nedeniyle süreyi 15 saniyeye çıkardık ki sunucu eski oturumu düşürebilsin
         botInstance.reconnectTimeout = setTimeout(() => {
             this.connectBot(id);
         }, 15000);
@@ -176,6 +174,18 @@ class AFKBotManager {
             return true;
         }
         return false;
+    }
+
+    getInventory(id) {
+        const botInstance = this.bots.get(id);
+        if (botInstance && botInstance.bot && botInstance.bot.inventory) {
+            return botInstance.bot.inventory.items().map(item => ({
+                name: item.name,
+                count: item.count,
+                slot: item.slot
+            }));
+        }
+        return null;
     }
 
     stopBot(id) {
