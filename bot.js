@@ -102,9 +102,15 @@ class AFKBotManager {
                 }
             });
 
-            botInstance.bot.on('messagestr', (message) => {
-                if (!message) return;
-                console.log(`[BOT:${id}] ${message}`);
+            // Sohbet mesajlarını rütbe, prefix ve isimleriyle tam olarak yakala
+            botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
+                const fullText = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
+                console.log(`[BOT:${id}] ${fullText}`);
+            });
+
+            botInstance.bot.on('whisper', (username, message, translate, jsonMsg) => {
+                const fullText = jsonMsg ? jsonMsg.toString() : `[Fısıltı] <${username}> ${message}`;
+                console.log(`[BOT:${id}] ${fullText}`);
             });
 
             botInstance.bot.on('kicked', (reason) => {
