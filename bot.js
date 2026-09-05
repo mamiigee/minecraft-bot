@@ -111,9 +111,10 @@ class AFKBotManager {
                 }
             });
 
-            botInstance.bot.on('chat', (username, message) => {
-                if (username === botInstance.bot.username) return;
-                console.log(`[BOT:${id}] [Chat] <${username}> ${message}`);
+            // Oyuncuların mesajlarını ve sunucu chatini kaçırmamak için messagestr kullanıyoruz
+            botInstance.bot.on('messagestr', (message) => {
+                if (!message) return;
+                console.log(`[BOT:${id}] ${message}`);
             });
 
             botInstance.bot.on('kicked', (reason) => {
