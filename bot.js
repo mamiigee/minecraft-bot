@@ -31,13 +31,10 @@ class AFKBotManager {
                 let savedBots = JSON.parse(data);
                 for (let id in savedBots) {
                     let b = savedBots[id];
-                    console.log(`[System] Kayıtlı bot yükleniyor ve başlatılıyor: ${id}`);
                     this.startBot(id, b.username, b.host, b.port, b.version, b.startupCommands, b.recurringMsg, b.recurringInterval, false);
                 }
             }
-        } catch (e) {
-            console.log("Kayıtlı botlar yüklenirken hata:", e);
-        }
+        } catch (e) {}
     }
 
     startBot(id, username, host, port, version, startupCommands, recurringMsg, recurringInterval, shouldSave = true) {
@@ -71,8 +68,6 @@ class AFKBotManager {
         const botInstance = this.bots.get(id);
         if (!botInstance) return;
 
-        console.log(`[BOT:${id}] Bağlanılıyor: ${botInstance.host}:${botInstance.port} (${botInstance.username})`);
-
         try {
             botInstance.bot = mineflayer.createBot({
                 host: botInstance.host,
@@ -82,8 +77,6 @@ class AFKBotManager {
             });
 
             botInstance.bot.on('spawn', () => {
-                console.log(`[BOT:${id}] Oyuna giriş yapıldı!`);
-                
                 if (botInstance.startupCommands) {
                     const cmds = botInstance.startupCommands.split(',').map(c => c.trim());
                     let delay = 1000;
@@ -92,7 +85,6 @@ class AFKBotManager {
                             setTimeout(() => {
                                 if (botInstance.bot && botInstance.bot.chat) {
                                     botInstance.bot.chat(cmd);
-                                    console.log(`[BOT:${id}] Komut gönderildi: ${cmd}`);
                                 }
                             }, delay);
                             delay += 1500;
@@ -105,36 +97,30 @@ class AFKBotManager {
                     botInstance.loopTimer = setInterval(() => {
                         if (botInstance.bot && botInstance.bot.chat) {
                             botInstance.bot.chat(botInstance.recurringMsg);
-                            console.log(`[BOT:${id}] [Loop] Mesaj gönderildi: ${botInstance.recurringMsg}`);
                         }
                     }, botInstance.recurringInterval * 1000);
                 }
             });
 
-            // Oyuncuların mesajlarını ve sunucu chatini kaçırmamak için messagestr kullanıyoruz
+            // Sadece oyun içi mesajlar ve sohbetler konsola yansıtılır
             botInstance.bot.on('messagestr', (message) => {
                 if (!message) return;
                 console.log(`[BOT:${id}] ${message}`);
             });
 
             botInstance.bot.on('kicked', (reason) => {
-                console.log(`[BOT:${id}] Sunucudan atıldı: ${reason}`);
                 this.cleanupBot(id);
                 this.scheduleReconnect(id);
             });
 
             botInstance.bot.on('end', (reason) => {
-                console.log(`[BOT:${id}] Bağlantı koptu (end): ${reason}`);
                 this.cleanupBot(id);
                 this.scheduleReconnect(id);
             });
 
-            botInstance.bot.on('error', (err) => {
-                console.log(`[BOT:${id}] Hata oluştu: ${err.message}`);
-            });
+            botInstance.bot.on('error', (err) => {});
 
         } catch (e) {
-            console.log(`[BOT:${id}] Bağlantı hatası: ${e.message}`);
             this.scheduleReconnect(id);
         }
     }
@@ -153,10 +139,10 @@ class AFKBotManager {
         if (!botInstance) return;
         if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
 
-        console.log(`[BOT:${id}] 10 saniye sonra yeniden bağlanılacak...`);
+        // Proxy çakışması (zaten bağlı hatası) nedeniyle süreyi 15 saniyeye çıkardık ki sunucu eski oturumu düşürebilsin
         botInstance.reconnectTimeout = setTimeout(() => {
             this.connectBot(id);
-        }, 10000);
+        }, 15000);
     }
 
     setLoop(id, message, interval) {
@@ -176,7 +162,6 @@ class AFKBotManager {
             botInstance.loopTimer = setInterval(() => {
                 if (botInstance.bot && botInstance.bot.chat) {
                     botInstance.bot.chat(message);
-                    console.log(`[BOT:${id}] [Loop] Mesaj gönderildi: ${message}`);
                 }
             }, botInstance.recurringInterval * 1000);
         }
@@ -187,7 +172,7 @@ class AFKBotManager {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.chat) {
             botInstance.bot.chat(message);
-            console.log(`[BOT:${id}] [Manuel] ${message}`);
+            console.log(`[BOT:${id}] [Sen]: ${message}`);
             return true;
         }
         return false;
@@ -207,7 +192,6 @@ class AFKBotManager {
 
         this.bots.delete(id);
         this.saveBots();
-        console.log(`[BOT:${id}] Bot tamamen durduruldu ve silindi.`);
         return { status: "success", message: `Bot (${id}) durduruldu!` };
     }
 
