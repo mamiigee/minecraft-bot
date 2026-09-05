@@ -14,7 +14,6 @@ const originalLog = console.log;
 console.log = function(...args) {
     originalLog.apply(console, args);
     const text = args.join(' ');
-    // [BOT:botId] formatını yakalayıp socket ile ilgili botun odasına gönderiyoruz
     const match = text.match(/\[BOT:(.*?)\]/);
     if (match) {
         const botId = match[1];
@@ -69,11 +68,10 @@ app.get('/', (req, res) => {
                 const socket = io();
                 let bots = {};
                 let currentActiveBot = null;
-                let currentSocketSub = null;
 
                 function showAddBotForm() {
                     currentActiveBot = null;
-                    document.getElementById('mainContainer.active']?.classList.remove('active');
+                    document.getElementById('mainContainer').classList.remove('active');
                     document.getElementById('mainContainer').innerHTML = \`
                         <div class="bot-form-panel">
                             <h3>Yeni Bot Ekle ve Başlat</h3>
@@ -139,7 +137,6 @@ app.get('/', (req, res) => {
                     currentActiveBot = id;
                     updateBotList();
 
-                    // Önceki socket dinlemesini kaldırıp yeni botun odasına bağlanıyoruz
                     socket.off('chatMessage');
 
                     document.getElementById('mainContainer').innerHTML = \`
@@ -162,7 +159,6 @@ app.get('/', (req, res) => {
                         </div>
                     \`;
 
-                    // Socket odasına katıl
                     socket.emit('joinBotRoom', id);
                     socket.on('chatMessage', function(msg) {
                         const chatBox = document.getElementById('chatBox');
@@ -194,7 +190,6 @@ app.get('/', (req, res) => {
                     }
                 }
 
-                // Sayfa ilk açıldığında ekle formunu göster
                 showAddBotForm();
             </script>
         </body>
@@ -202,7 +197,6 @@ app.get('/', (req, res) => {
     `);
 });
 
-// Socket.io istemci oda yönetimi eklemesi
 io.on('connection', (socket) => {
     socket.on('joinBotRoom', (botId) => {
         socket.join(botId);
