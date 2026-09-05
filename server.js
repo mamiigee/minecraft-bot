@@ -68,6 +68,7 @@ app.get('/', (req, res) => {
             <script>
                 const socket = io();
                 let bots = {};
+                let chatHistories = {}; // Her botun sohbet geçmişini burada saklayacağız
                 let currentActiveBot = null;
 
                 function showAddBotForm() {
@@ -138,8 +139,6 @@ app.get('/', (req, res) => {
                     currentActiveBot = id;
                     updateBotList();
 
-                    socket.off('chatMessage');
-
                     document.getElementById('mainContainer').innerHTML = \`
                         <div class="bot-form-panel">
                             <h3>Bot Yönetimi: \${id}</h3>
@@ -163,20 +162,36 @@ app.get('/', (req, res) => {
                             </div>
                         </div>
                         <div class="chat-panel">
-                            <h3>\${id} - Canlı Konsol</h3>
+                            <h3>\${id} - Canlı Konsol ve Chat</h3>
                             <div id="chatBox"></div>
                         </div>
                     \`;
 
+                    // Eğer bu botun daha önce biriken yazıları varsa ekrana geri bas
+                    const chatBox = document.getElementById('chatBox');
+                    if (chatHistories[id]) {
+                        chatBox.innerHTML = chatHistories[id];
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+
                     socket.emit('joinBotRoom', id);
-                    socket.on('chatMessage', function(msg) {
-                        const chatBox = document.getElementById('chatBox');
-                        if(chatBox) {
-                            chatBox.innerHTML += msg + "\\n";
-                            chatBox.scrollTop = chatBox.scrollHeight;
-                        }
-                    });
                 }
+
+                // Global socket dinleyicisi (Tek sefer tanımlanır, gelen mesajı ilgili botun hafızasına ve ekranına işler)
+                socket.off('chatMessage');
+                socket.on('chatMessage', function(msg) {
+                    if (!currentActiveBot) return;
+                    if (!chatHistories[currentActiveBot]) {
+                        chatHistories[currentActiveBot] = '';
+                    }
+                    chatHistories[currentActiveBot] += msg + "\\n";
+                    
+                    const chatBox = document.getElementById('chatBox');
+                    if(chatBox) {
+                        chatBox.innerHTML = chatHistories[currentActiveBot];
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
+                });
 
                 async function updateLoop(id) {
                     let msg = document.getElementById('loopMsgInput').value;
@@ -195,6 +210,7 @@ app.get('/', (req, res) => {
                     let json = await res.json();
                     alert(json.message);
                     delete bots[id];
+                    delete chatHistories[id]; // Hafızadan da temizle
                     updateBotList();
                     showAddBotForm();
                 }
