@@ -102,11 +102,18 @@ class AFKBotManager {
                 }
             });
 
-            // JSON bileşenlerini tam metne (rütbe, isim ve mesaj dahil) dönüştür
-            botInstance.bot.on('messagestr', (message, position, jsonMsg) => {
-                if (message && message.trim() !== '') {
-                    const fullText = jsonMsg ? jsonMsg.toString() : message;
-                    console.log(`[BOT:${id}] ${fullText}`);
+            // Standart chat olayı (rütbe ve kullanıcı adını yakalayabildiği durumlar için)
+            botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
+                const fullText = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
+                console.log(`[BOT:${id}] ${fullText}`);
+            });
+
+            // Ham mesaj ve duyuru yakalayıcısı (diğer tüm sunucu ve oyuncu mesajları için)
+            botInstance.bot.on('message', (jsonMsg, position) => {
+                if (position === 2) return; // Action bar mesajlarını yoksay
+                const text = jsonMsg.toString();
+                if (text && text.trim() !== '') {
+                    console.log(`[BOT:${id}] ${text}`);
                 }
             });
 
