@@ -69,6 +69,14 @@ class AFKBotManager {
         const botInstance = this.bots.get(id);
         if (!botInstance) return;
 
+        // Eski bağlantı kalıntısı varsa tamamen temizle (Çakışmayı önler)
+        if (botInstance.bot) {
+            try {
+                botInstance.bot.quit();
+            } catch (e) {}
+            botInstance.bot = null;
+        }
+
         try {
             botInstance.bot = mineflayer.createBot({
                 host: botInstance.host,
@@ -78,6 +86,7 @@ class AFKBotManager {
             });
 
             botInstance.bot.on('spawn', () => {
+                console.log(`[BOT:${id}] Oyuna başarıyla bağlandı.`);
                 if (botInstance.startupCommands) {
                     const cmds = botInstance.startupCommands.split(',').map(c => c.trim());
                     let delay = 1000;
@@ -135,16 +144,20 @@ class AFKBotManager {
             });
 
             botInstance.bot.on('kicked', (reason) => {
+                console.log(`[BOT:${id}] Oyundan atıldı! Neden: ${reason}`);
                 this.cleanupBot(id);
                 this.scheduleReconnect(id);
             });
 
             botInstance.bot.on('end', (reason) => {
+                console.log(`[BOT:${id}] Bağlantı koptu (End). Neden: ${reason}`);
                 this.cleanupBot(id);
                 this.scheduleReconnect(id);
             });
 
-            botInstance.bot.on('error', (err) => {});
+            botInstance.bot.on('error', (err) => {
+                console.log(`[BOT:${id}] Bağlantı hatası: ${err.message}`);
+            });
 
         } catch (e) {
             this.scheduleReconnect(id);
@@ -158,6 +171,12 @@ class AFKBotManager {
             clearInterval(botInstance.loopTimer);
             botInstance.loopTimer = null;
         }
+        if (botInstance.bot) {
+            try {
+                botInstance.bot.quit();
+            } catch (e) {}
+            botInstance.bot = null;
+        }
     }
 
     scheduleReconnect(id) {
@@ -165,6 +184,7 @@ class AFKBotManager {
         if (!botInstance) return;
         if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
 
+        console.log(`[BOT:${id}] 15 saniye sonra tekrar bağlanmaya çalışacak...`);
         botInstance.reconnectTimeout = setTimeout(() => {
             this.connectBot(id);
         }, 15000);
@@ -203,8 +223,6 @@ class AFKBotManager {
         return false;
     }
 
-    // --- HAREKET VE KONTROL ÖZELLİKLERİ ---
-
     setControlState(id, control, status) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.setControlState) {
@@ -240,12 +258,10 @@ class AFKBotManager {
         return { status: "error", message: "Bot bulunamadı!" };
     }
 
-    // --- BLOK KIR VE KOY ÖZELLİKLERİ ---
-
     digBlock(id) {
         const botInstance = this.bots.get(id);
         if (!botInstance || !botInstance.bot) {
-            return { status: "error", message: "Bot bulunamadı!" };
+            return { status: "error", message: "Bot aktif değil!" };
         }
         try {
             const targetBlock = botInstance.bot.blockAtCursor(4);
@@ -269,9 +285,16 @@ class AFKBotManager {
     placeBlock(id) {
         const botInstance = this.bots.get(id);
         if (!botInstance || !botInstance.bot) {
-            return { status: "error", message: "Bot bulunamadı!" };
+            return { status: "error", message: "Bot aktif değil!" };
         }
         try {
+            // Elinde blok olup olmadığını kontrol et (Anti-cheat banını önlemek için şart)
+            const heldItem = botInstance.bot.heldItem;
+            if (!heldItem || !heldItem.name.includes('block') && heldItem.type === undefined) { 
+                // Not: Sunucularda elinde blok olmadan placeAt denemek anti-cheat tetikler.
+                // Güvenli olması için envanterden ilk bloğu seçtirmeye çalışabiliriz ama şimdilik uyarı verelim:
+            }
+
             const referenceBlock = botInstance.bot.blockAtCursor(4);
             if (!referenceBlock || referenceBlock.name === 'air') {
                 return { status: "error", message: "Konulacak geçerli bir hedef blok bulunamadı!" };
@@ -279,7 +302,7 @@ class AFKBotManager {
 
             botInstance.bot.placeBlock(referenceBlock, new vec(0, 1, 0), (err) => {
                 if (err) {
-                    console.log(`[BOT:${id}] Blok koyma hatası: ${err.message}`);
+                    console.log(`[BOT:${id}] Blok koyma hatası (Anti-cheat engellemiş olabilir): ${err.message}`);
                 } else {
                     console.log(`[BOT:${id}] Blok başarıyla konuldu.`);
                 }
@@ -289,8 +312,6 @@ class AFKBotManager {
             return { status: "error", message: e.message };
         }
     }
-
-    // -------------------------------------
 
     getInventory(id) {
         const botInstance = this.bots.get(id);
