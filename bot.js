@@ -102,19 +102,20 @@ class AFKBotManager {
                 }
             });
 
-            // Standart chat olayı (rütbe ve kullanıcı adını yakalayabildiği durumlar için)
-            botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
-                const fullText = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
-                console.log(`[BOT:${id}] ${fullText}`);
-            });
-
-            // Ham mesaj ve duyuru yakalayıcısı (diğer tüm sunucu ve oyuncu mesajları için)
+            // Gelen tüm mesajları ve JSON yapılarını detaylı yakala
             botInstance.bot.on('message', (jsonMsg, position) => {
                 if (position === 2) return; // Action bar mesajlarını yoksay
-                const text = jsonMsg.toString();
-                if (text && text.trim() !== '') {
-                    console.log(`[BOT:${id}] ${text}`);
+                
+                let text = jsonMsg.toString();
+                if (!text || text.trim() === '') return;
+
+                // Eğer mesajın içinde JSON yapısı (ekstra elementler) varsa inceleyelim
+                if (jsonMsg.json && jsonMsg.json.extra) {
+                    // Sunucu eklentisinin gönderdiği ham yapı bazen buradadır
+                    // console.log("JSON Yapısı:", JSON.stringify(jsonMsg.json));
                 }
+
+                console.log(`[BOT:${id}] ${text}`);
             });
 
             botInstance.bot.on('kicked', (reason) => {
