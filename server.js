@@ -249,7 +249,7 @@ app.get('/', (req, res) => {
                     const ctx = canvas.getContext('2d');
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                    ctx.strokeStyle = '#222';
+                    ctx.strokeStyle = '#1a1a1a';
                     ctx.lineWidth = 1;
                     for(let i = 0; i < canvas.width; i += 20) {
                         ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
@@ -257,7 +257,7 @@ app.get('/', (req, res) => {
                     }
 
                     if(json.status === "success" && json.position) {
-                        let { x, y, z, yaw, entities } = json.position;
+                        let { x, y, z, yaw, entities, blocks } = json.position;
                         coordText.innerText = \`X: \${x.toFixed(1)}, Y: \${y.toFixed(1)}, Z: \${z.toFixed(1)}\`;
 
                         let cx = canvas.width / 2;
@@ -267,6 +267,18 @@ app.get('/', (req, res) => {
                         ctx.translate(cx, cy);
                         if(yaw !== undefined) {
                             ctx.rotate(-yaw);
+                        }
+
+                        if (blocks && blocks.length > 0) {
+                            blocks.forEach(b => {
+                                let relX = (b.x - x) * 4;
+                                let relZ = (b.z - z) * 4;
+
+                                if (Math.abs(relX) < cx + 10 && Math.abs(relZ) < cy + 10) {
+                                    ctx.fillStyle = getBlockColor(b.name);
+                                    ctx.fillRect(relX - 2, relZ - 2, 4, 4);
+                                }
+                            });
                         }
 
                         if (entities && entities.length > 0) {
@@ -306,6 +318,16 @@ app.get('/', (req, res) => {
                         ctx.textAlign = 'center';
                         ctx.fillText("Bot Aktif Değil", canvas.width / 2, canvas.height / 2);
                     }
+                }
+
+                function getBlockColor(name) {
+                    if (name.includes('water')) return '#3b82f6';
+                    if (name.includes('grass') || name.includes('leaves')) return '#22c55e';
+                    if (name.includes('sand')) return '#eab308';
+                    if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return '#71717a';
+                    if (name.includes('log') || name.includes('wood') || name.includes('planks')) return '#78350f';
+                    if (name.includes('dirt')) return '#a16207';
+                    return '#444444';
                 }
 
                 socket.off('chatMessage');
