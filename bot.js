@@ -347,7 +347,7 @@ class AFKBotManager {
                 }
             }
 
-            const radius = 12;
+            const radius = 27;
             const bx = Math.floor(botPos.x);
             const bz = Math.floor(botPos.z);
             const by = Math.floor(botPos.y);
