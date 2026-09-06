@@ -257,7 +257,7 @@ app.get('/', (req, res) => {
                     }
 
                     if(json.status === "success" && json.position) {
-                        let { x, y, z, yaw } = json.position;
+                        let { x, y, z, yaw, entities } = json.position;
                         coordText.innerText = \`X: \${x.toFixed(1)}, Y: \${y.toFixed(1)}, Z: \${z.toFixed(1)}\`;
 
                         let cx = canvas.width / 2;
@@ -267,6 +267,23 @@ app.get('/', (req, res) => {
                         ctx.translate(cx, cy);
                         if(yaw !== undefined) {
                             ctx.rotate(-yaw);
+                        }
+
+                        if (entities && entities.length > 0) {
+                            entities.forEach(e => {
+                                let relX = (e.x - x) * 4;
+                                let relZ = (e.z - z) * 4;
+
+                                if (Math.abs(relX) < cx && Math.abs(relZ) < cy) {
+                                    ctx.save();
+                                    ctx.translate(relX, relZ);
+                                    ctx.fillStyle = e.type === 'player' ? '#2196F3' : '#ff9800';
+                                    ctx.beginPath();
+                                    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                                    ctx.fill();
+                                    ctx.restore();
+                                }
+                            });
                         }
 
                         ctx.fillStyle = '#4CAF50';
