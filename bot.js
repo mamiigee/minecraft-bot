@@ -1,5 +1,6 @@
 const mineflayer = require('mineflayer');
 const fs = require('fs');
+const Vec3 = require('vec3');
 
 class AFKBotManager {
     constructor() {
@@ -328,6 +329,7 @@ class AFKBotManager {
         if (botInstance && botInstance.bot && botInstance.bot.entity) {
             const botPos = botInstance.bot.entity.position;
             let entities = [];
+            let blocks = [];
             
             if (botInstance.bot.entities) {
                 for (let entId in botInstance.bot.entities) {
@@ -345,12 +347,44 @@ class AFKBotManager {
                 }
             }
 
+            const radius = 12;
+            const bx = Math.floor(botPos.x);
+            const bz = Math.floor(botPos.z);
+            const by = Math.floor(botPos.y);
+
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dz = -radius; dz <= radius; dz++) {
+                    let x = bx + dx;
+                    let z = bz + dz;
+                    let foundBlock = null;
+                    
+                    for (let y = by + 6; y >= by - 10; y--) {
+                        try {
+                            let block = botInstance.bot.blockAt(new Vec3(x, y, z));
+                            if (block && block.name !== 'air' && block.name !== 'cave_air' && block.name !== 'void_air') {
+                                foundBlock = block;
+                                break;
+                            }
+                        } catch (err) {}
+                    }
+
+                    if (foundBlock) {
+                        blocks.push({
+                            x: x,
+                            z: z,
+                            name: foundBlock.name
+                        });
+                    }
+                }
+            }
+
             return {
                 x: botPos.x,
                 y: botPos.y,
                 z: botPos.z,
                 yaw: botInstance.bot.entity.yaw,
-                entities: entities
+                entities: entities,
+                blocks: blocks
             };
         }
         return null;
