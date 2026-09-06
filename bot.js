@@ -124,7 +124,6 @@ class AFKBotManager {
                 }
             });
 
-            // In-game Chat Command Listener (Prefix: !)
             botInstance.bot.on('chat', (username, message) => {
                 if (username === botInstance.bot.username) return;
 
@@ -340,6 +339,52 @@ class AFKBotManager {
             return slots;
         }
         return null;
+    }
+
+    dropItem(id, slot) {
+        const botInstance = this.bots.get(id);
+        if (botInstance && botInstance.bot && botInstance.bot.inventory) {
+            const item = botInstance.bot.inventory.slots[slot];
+            if (!item) {
+                return { status: "error", message: "Bu slotta eşya yok!" };
+            }
+            botInstance.bot.tossStack(item, (err) => {
+                if (err) {
+                    console.log(`[BOT:${id}] Eşya atılamadı: ${err.message}`);
+                } else {
+                    console.log(`[BOT:${id}] Eşya atıldı: ${item.name} (${item.count} adet)`);
+                }
+            });
+            return { status: "success", message: "Eşya atma komutu gönderildi." };
+        }
+        return { status: "error", message: "Bot aktif değil!" };
+    }
+
+    dropAllItems(id) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance || !botInstance.bot || !botInstance.bot.inventory) {
+            return { status: "error", message: "Bot aktif değil!" };
+        }
+
+        const slots = botInstance.bot.inventory.slots;
+        
+        const tossNext = (index) => {
+            if (index > 44) {
+                console.log(`[BOT:${id}] Tüm envanter atma işlemi tamamlandı.`);
+                return;
+            }
+            const item = slots[index];
+            if (item) {
+                botInstance.bot.tossStack(item, (err) => {
+                    setTimeout(() => tossNext(index + 1), 150);
+                });
+            } else {
+                tossNext(index + 1);
+            }
+        };
+
+        tossNext(9);
+        return { status: "success", message: "Tüm envanteri atma işlemi başlatıldı." };
     }
 
     stopBot(id) {
