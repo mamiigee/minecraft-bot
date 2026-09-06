@@ -326,12 +326,31 @@ class AFKBotManager {
     getPosition(id) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.entity) {
-            const pos = botInstance.bot.entity.position;
+            const botPos = botInstance.bot.entity.position;
+            let entities = [];
+            
+            if (botInstance.bot.entities) {
+                for (let entId in botInstance.bot.entities) {
+                    let e = botInstance.bot.entities[entId];
+                    if (e !== botInstance.bot.entity && e.position) {
+                        if (e.type === 'player' || e.type === 'mob') {
+                            entities.push({
+                                x: e.position.x,
+                                z: e.position.z,
+                                type: e.type,
+                                name: e.username || e.name || 'Canlı'
+                            });
+                        }
+                    }
+                }
+            }
+
             return {
-                x: pos.x,
-                y: pos.y,
-                z: pos.z,
-                yaw: botInstance.bot.entity.yaw
+                x: botPos.x,
+                y: botPos.y,
+                z: botPos.z,
+                yaw: botInstance.bot.entity.yaw,
+                entities: entities
             };
         }
         return null;
