@@ -93,10 +93,14 @@ app.get('/', (req, res) => {
                                 <input type="text" id="newVersion" value="1.20.1">
                                 <label>Giriş Komutları (Virgülle ayırın)</label>
                                 <input type="text" id="newStartup" value="/login Sifre123, /skyblock">
-                                <label>Tekrarlayan (Loop) Mesaj</label>
-                                <input type="text" id="newLoopMsg" placeholder="Boş bırakılabilir">
-                                <label>Tekrarlama Süresi (Saniye)</label>
-                                <input type="text" id="newLoopInterval" value="60">
+                                <label>Loop 1 Mesajı</label>
+                                <input type="text" id="newLoopMsg1" placeholder="Boş bırakılabilir">
+                                <label>Loop 1 Süresi (Saniye)</label>
+                                <input type="text" id="newLoopInterval1" value="60">
+                                <label>Loop 2 Mesajı</label>
+                                <input type="text" id="newLoopMsg2" placeholder="Boş bırakılabilir">
+                                <label>Loop 2 Süresi (Saniye)</label>
+                                <input type="text" id="newLoopInterval2" value="60">
                                 <button onclick="startNewBot()">Botu Başlat ve Kaydet</button>
                             </div>
                         </div>
@@ -114,8 +118,10 @@ app.get('/', (req, res) => {
                         port: document.getElementById('newPort').value,
                         version: document.getElementById('newVersion').value,
                         startupCommands: document.getElementById('newStartup').value,
-                        recurringMsg: document.getElementById('newLoopMsg').value,
-                        recurringInterval: document.getElementById('newLoopInterval').value
+                        recurringMsg1: document.getElementById('newLoopMsg1').value,
+                        recurringInterval1: document.getElementById('newLoopInterval1').value,
+                        recurringMsg2: document.getElementById('newLoopMsg2').value,
+                        recurringInterval2: document.getElementById('newLoopInterval2').value
                     };
 
                     let res = await fetch('/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
@@ -183,12 +189,20 @@ app.get('/', (req, res) => {
                                 <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
                             </div>
                             <div class="card">
-                                <h3>Tekrarlayan Mesajı Ayarla / Güncelle</h3>
-                                <label>Loop Mesajı</label>
-                                <input type="text" id="loopMsgInput" value="\${bots[id].recurringMsg || ''}" placeholder="Sürekli tekrarlanacak mesaj">
+                                <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
+                                <label>Loop 1 Mesajı</label>
+                                <input type="text" id="loopMsgInput1" value="\${bots[id].recurringMsg1 || ''}" placeholder="Sürekli tekrarlanacak mesaj 1">
                                 <label>Süre (Saniye)</label>
-                                <input type="text" id="loopIntervalInput" value="\${bots[id].recurringInterval || 60}" placeholder="60">
-                                <button class="loop-btn" onclick="updateLoop('\${id}')">Döngüyü Güncelle</button>
+                                <input type="text" id="loopIntervalInput1" value="\${bots[id].recurringInterval1 || 60}" placeholder="60">
+                                <button class="loop-btn" onclick="updateLoop1('\${id}')">Döngü 1'i Güncelle</button>
+                            </div>
+                            <div class="card">
+                                <h3>Tekrarlayan Mesaj 2 (Loop 2)</h3>
+                                <label>Loop 2 Mesajı</label>
+                                <input type="text" id="loopMsgInput2" value="\${bots[id].recurringMsg2 || ''}" placeholder="Sürekli tekrarlanacak mesaj 2">
+                                <label>Süre (Saniye)</label>
+                                <input type="text" id="loopIntervalInput2" value="\${bots[id].recurringInterval2 || 60}" placeholder="60">
+                                <button class="loop-btn" onclick="updateLoop2('\${id}')">Döngü 2'yi Güncelle</button>
                             </div>
                         </div>
                         <div class="chat-panel">
@@ -277,14 +291,26 @@ app.get('/', (req, res) => {
                     }
                 }
 
-                async function updateLoop(id) {
-                    let msg = document.getElementById('loopMsgInput').value;
-                    let interval = document.getElementById('loopIntervalInput').value;
+                async function updateLoop1(id) {
+                    let msg = document.getElementById('loopMsgInput1').value;
+                    let interval = document.getElementById('loopIntervalInput1').value;
                     
-                    bots[id].recurringMsg = msg;
-                    bots[id].recurringInterval = interval;
+                    bots[id].recurringMsg1 = msg;
+                    bots[id].recurringInterval1 = interval;
 
-                    let res = await fetch('/loop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
+                    let res = await fetch('/loop1', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
+                    let json = await res.json();
+                    alert(json.message);
+                }
+
+                async function updateLoop2(id) {
+                    let msg = document.getElementById('loopMsgInput2').value;
+                    let interval = document.getElementById('loopIntervalInput2').value;
+                    
+                    bots[id].recurringMsg2 = msg;
+                    bots[id].recurringInterval2 = interval;
+
+                    let res = await fetch('/loop2', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
                     let json = await res.json();
                     alert(json.message);
                 }
@@ -351,8 +377,8 @@ app.get('/inventory/:id', (req, res) => {
 });
 
 app.post('/start', (req, res) => {
-    const { id, username, host, port, version, startupCommands, recurringMsg, recurringInterval } = req.body;
-    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg, recurringInterval, true);
+    const { id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2 } = req.body;
+    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true);
     res.json(result);
 });
 
@@ -374,11 +400,21 @@ app.post('/clear-controls', (req, res) => {
     res.json(result);
 });
 
-app.post('/loop', (req, res) => {
+app.post('/loop1', (req, res) => {
     const { id, message, interval } = req.body;
-    const success = manager.setLoop(id, message, parseInt(interval));
+    const success = manager.setLoop1(id, message, parseInt(interval));
     if (success) {
-        res.json({ status: "success", message: "Tekrarlayan mesaj güncellendi!" });
+        res.json({ status: "success", message: "Tekrarlayan mesaj 1 güncellendi!" });
+    } else {
+        res.json({ status: "error", message: "Bot bulunamadı!" });
+    }
+});
+
+app.post('/loop2', (req, res) => {
+    const { id, message, interval } = req.body;
+    const success = manager.setLoop2(id, message, parseInt(interval));
+    if (success) {
+        res.json({ status: "success", message: "Tekrarlayan mesaj 2 güncellendi!" });
     } else {
         res.json({ status: "error", message: "Bot bulunamadı!" });
     }
