@@ -1,4 +1,5 @@
 const mineflayer = require('mineflayer');
+const { mineflayer: mineflayerViewer } = require('prismarine-viewer');
 const fs = require('fs');
 
 class AFKBotManager {
@@ -88,8 +89,18 @@ class AFKBotManager {
                 version: botInstance.version
             });
 
-            botInstance.bot.on('spawn', () => {
+            botInstance.bot.once('spawn', () => {
                 console.log(`[BOT:${id}] Oyuna başarıyla bağlandı.`);
+                
+                // Prismarine-viewer entegrasyonu: Her bot için benzersiz bir port türetiyoruz (örn: 3000 + id veya hash)
+                try {
+                    const viewerPort = 3000 + Math.abs(id.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 1000);
+                    mineflayerViewer(botInstance.bot, { port: viewerPort, firstPerson: true });
+                    console.log(`[BOT:${id}] Canlı harita (Viewer) aktif: http://localhost:${viewerPort}`);
+                } catch (viewerErr) {
+                    console.log(`[BOT:${id}] Harita başlatılamadı: ${viewerErr.message}`);
+                }
+
                 if (botInstance.startupCommands) {
                     const cmds = botInstance.startupCommands.split(',').map(c => c.trim());
                     let delay = 1000;
