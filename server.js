@@ -73,9 +73,11 @@ app.get('/', (req, res) => {
                 let bots = {};
                 let chatHistories = {};
                 let currentActiveBot = null;
+                let mapInterval = null;
 
                 function showAddBotForm() {
                     currentActiveBot = null;
+                    if(mapInterval) clearInterval(mapInterval);
                     updateBotList();
                     document.getElementById('mainContainer').innerHTML = \`
                         <div class="bot-form-panel">
@@ -146,6 +148,7 @@ app.get('/', (req, res) => {
 
                 function selectBot(id) {
                     currentActiveBot = id;
+                    if(mapInterval) clearInterval(mapInterval);
                     updateBotList();
 
                     document.getElementById('mainContainer').innerHTML = \`
@@ -155,6 +158,12 @@ app.get('/', (req, res) => {
                                 <p><b>Kullanıcı:</b> \${bots[id].username}</p>
                                 <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
                                 <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
+                            </div>
+
+                            <div class="card">
+                                <h3>Canlı Harita (Radar)</h3>
+                                <canvas id="botMap" width="220" height="220" style="background: #111; border: 1px solid #444; border-radius: 4px; display: block; margin: 0 auto;"></canvas>
+                                <div id="coordText" style="text-align: center; font-size: 12px; color: #aaa; margin-top: 5px;">X: 0, Y: 0, Z: 0</div>
                             </div>
 
                             <div class="card">
@@ -222,6 +231,64 @@ app.get('/', (req, res) => {
 
                     socket.emit('joinBotRoom', id);
                     loadInventory(id);
+                    startMapPolling(id);
+                }
+
+                function startMapPolling(id) {
+                    updateMap(id);
+                    mapInterval = setInterval(() => updateMap(id), 1000);
+                }
+
+                async function updateMap(id) {
+                    let res = await fetch('/position/' + id);
+                    let json = await res.json();
+                    const canvas = document.getElementById('botMap');
+                    const coordText = document.getElementById('coordText');
+                    if(!canvas || !coordText) return;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.strokeStyle = '#222';
+                    ctx.lineWidth = 1;
+                    for(let i = 0; i < canvas.width; i += 20) {
+                        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+                    }
+
+                    if(json.status === "success" && json.position) {
+                        let { x, y, z, yaw } = json.position;
+                        coordText.innerText = \`X: \${x.toFixed(1)}, Y: \${y.toFixed(1)}, Z: \${z.toFixed(1)}\`;
+
+                        let cx = canvas.width / 2;
+                        let cy = canvas.height / 2;
+
+                        ctx.save();
+                        ctx.translate(cx, cy);
+                        if(yaw !== undefined) {
+                            ctx.rotate(-yaw);
+                        }
+
+                        ctx.fillStyle = '#4CAF50';
+                        ctx.beginPath();
+                        ctx.moveTo(0, -8);
+                        ctx.lineTo(-6, 8);
+                        ctx.lineTo(6, 8);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+
+                        ctx.fillStyle = '#fff';
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        coordText.innerText = "Konum alınamadı (Bot offline)";
+                        ctx.fillStyle = '#777';
+                        ctx.font = '11px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText("Bot Aktif Değil", canvas.width / 2, canvas.height / 2);
+                    }
                 }
 
                 socket.off('chatMessage');
@@ -346,6 +413,7 @@ app.get('/', (req, res) => {
                 }
 
                 async function stopBot(id) {
+                    if(mapInterval) clearInterval(mapInterval);
                     let res = await fetch('/stop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
                     let json = await res.json();
                     alert(json.message);
@@ -403,6 +471,15 @@ app.get('/inventory/:id', (req, res) => {
         res.json({ status: "success", items });
     } else {
         res.json({ status: "error", message: "Bot aktif değil!" });
+    }
+});
+
+app.get('/position/:id', (req, res) => {
+    const pos = manager.getPosition ? manager.getPosition(req.params.id) : null;
+    if (pos) {
+        res.json({ status: "success", position: pos });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil veya konum alınamadı!" });
     }
 });
 
