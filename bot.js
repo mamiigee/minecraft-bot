@@ -124,12 +124,39 @@ class AFKBotManager {
                 }
             });
 
-            botInstance.bot.on('playerChat', (username, translatedMessage, message, jsonMsg) => {
-                const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
-                console.log(`[BOT:${id}] ${formatted}`);
+            // In-game Chat Command Listener (Prefix: !)
+            botInstance.bot.on('chat', (username, message) => {
+                if (username === botInstance.bot.username) return;
+
+                if (message.startsWith('!')) {
+                    const args = message.slice(1).trim().split(/ +/);
+                    const command = args.shift().toLowerCase();
+
+                    if (command === 'jump') {
+                        botInstance.bot.setControlState('jump', true);
+                        setTimeout(() => {
+                            if (botInstance.bot) botInstance.bot.setControlState('jump', false);
+                        }, 300);
+                        botInstance.bot.chat('Zıpladım!');
+                    } else if (command === 'say' && args.length > 0) {
+                        botInstance.bot.chat(args.join(' '));
+                    } else if (command === 'konum' || command === 'coords') {
+                        if (botInstance.bot.entity) {
+                            const pos = botInstance.bot.entity.position;
+                            botInstance.bot.chat(`Konum: X: ${Math.floor(pos.x)}, Y: ${Math.floor(pos.y)}, Z: ${Math.floor(pos.z)}`);
+                        }
+                    } else if (command === 'spin') {
+                        const yaw = botInstance.bot.entity.yaw + Math.PI;
+                        botInstance.bot.look(yaw, 0);
+                        botInstance.bot.chat('Etrafımda döndüm.');
+                    } else if (command === 'dur' || command === 'stopmove') {
+                        botInstance.bot.clearControlStates();
+                        botInstance.bot.chat('Hareketler durduruldu.');
+                    }
+                }
             });
 
-            botInstance.bot.on('chat', (username, message, translate, jsonMsg) => {
+            botInstance.bot.on('playerChat', (username, translatedMessage, message, jsonMsg) => {
                 const formatted = jsonMsg ? jsonMsg.toString() : `<${username}> ${message}`;
                 console.log(`[BOT:${id}] ${formatted}`);
             });
