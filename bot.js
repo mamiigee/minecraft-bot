@@ -17,8 +17,10 @@ class AFKBotManager {
                 port: b.port,
                 version: b.version,
                 startupCommands: b.startupCommands,
-                recurringMsg: b.recurringMsg,
-                recurringInterval: b.recurringInterval
+                recurringMsg1: b.recurringMsg1,
+                recurringInterval1: b.recurringInterval1,
+                recurringMsg2: b.recurringMsg2,
+                recurringInterval2: b.recurringInterval2
             };
         }
         fs.writeFileSync(this.dataFile, JSON.stringify(list, null, 2));
@@ -31,13 +33,13 @@ class AFKBotManager {
                 let savedBots = JSON.parse(data);
                 for (let id in savedBots) {
                     let b = savedBots[id];
-                    this.startBot(id, b.username, b.host, b.port, b.version, b.startupCommands, b.recurringMsg, b.recurringInterval, false);
+                    this.startBot(id, b.username, b.host, b.port, b.version, b.startupCommands, b.recurringMsg1, b.recurringInterval1, b.recurringMsg2, b.recurringInterval2, false);
                 }
             }
         } catch (e) {}
     }
 
-    startBot(id, username, host, port, version, startupCommands, recurringMsg, recurringInterval, shouldSave = true) {
+    startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, shouldSave = true) {
         if (this.bots.has(id)) {
             this.stopBot(id);
         }
@@ -48,10 +50,13 @@ class AFKBotManager {
             port: parseInt(port),
             version,
             startupCommands,
-            recurringMsg,
-            recurringInterval: parseInt(recurringInterval),
+            recurringMsg1: recurringMsg1 || '',
+            recurringInterval1: parseInt(recurringInterval1) || 0,
+            recurringMsg2: recurringMsg2 || '',
+            recurringInterval2: parseInt(recurringInterval2) || 0,
             bot: null,
-            loopTimer: null,
+            loopTimer1: null,
+            loopTimer2: null,
             reconnectTimeout: null
         };
 
@@ -100,13 +105,22 @@ class AFKBotManager {
                     });
                 }
 
-                if (botInstance.recurringMsg && botInstance.recurringInterval > 0) {
-                    if (botInstance.loopTimer) clearInterval(botInstance.loopTimer);
-                    botInstance.loopTimer = setInterval(() => {
+                if (botInstance.recurringMsg1 && botInstance.recurringInterval1 > 0) {
+                    if (botInstance.loopTimer1) clearInterval(botInstance.loopTimer1);
+                    botInstance.loopTimer1 = setInterval(() => {
                         if (botInstance.bot && botInstance.bot.chat) {
-                            botInstance.bot.chat(botInstance.recurringMsg);
+                            botInstance.bot.chat(botInstance.recurringMsg1);
                         }
-                    }, botInstance.recurringInterval * 1000);
+                    }, botInstance.recurringInterval1 * 1000);
+                }
+
+                if (botInstance.recurringMsg2 && botInstance.recurringInterval2 > 0) {
+                    if (botInstance.loopTimer2) clearInterval(botInstance.loopTimer2);
+                    botInstance.loopTimer2 = setInterval(() => {
+                        if (botInstance.bot && botInstance.bot.chat) {
+                            botInstance.bot.chat(botInstance.recurringMsg2);
+                        }
+                    }, botInstance.recurringInterval2 * 1000);
                 }
             });
 
@@ -165,9 +179,13 @@ class AFKBotManager {
     cleanupBot(id) {
         const botInstance = this.bots.get(id);
         if (!botInstance) return;
-        if (botInstance.loopTimer) {
-            clearInterval(botInstance.loopTimer);
-            botInstance.loopTimer = null;
+        if (botInstance.loopTimer1) {
+            clearInterval(botInstance.loopTimer1);
+            botInstance.loopTimer1 = null;
+        }
+        if (botInstance.loopTimer2) {
+            clearInterval(botInstance.loopTimer2);
+            botInstance.loopTimer2 = null;
         }
         if (botInstance.bot) {
             try {
@@ -188,25 +206,48 @@ class AFKBotManager {
         }, 15000);
     }
 
-    setLoop(id, message, interval) {
+    setLoop1(id, message, interval) {
         const botInstance = this.bots.get(id);
         if (!botInstance) return false;
 
-        botInstance.recurringMsg = message;
-        botInstance.recurringInterval = parseInt(interval);
+        botInstance.recurringMsg1 = message;
+        botInstance.recurringInterval1 = parseInt(interval);
         this.saveBots();
 
-        if (botInstance.loopTimer) {
-            clearInterval(botInstance.loopTimer);
-            botInstance.loopTimer = null;
+        if (botInstance.loopTimer1) {
+            clearInterval(botInstance.loopTimer1);
+            botInstance.loopTimer1 = null;
         }
 
-        if (message && botInstance.recurringInterval > 0) {
-            botInstance.loopTimer = setInterval(() => {
+        if (message && botInstance.recurringInterval1 > 0) {
+            botInstance.loopTimer1 = setInterval(() => {
                 if (botInstance.bot && botInstance.bot.chat) {
                     botInstance.bot.chat(message);
                 }
-            }, botInstance.recurringInterval * 1000);
+            }, botInstance.recurringInterval1 * 1000);
+        }
+        return true;
+    }
+
+    setLoop2(id, message, interval) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance) return false;
+
+        botInstance.recurringMsg2 = message;
+        botInstance.recurringInterval2 = parseInt(interval);
+        this.saveBots();
+
+        if (botInstance.loopTimer2) {
+            clearInterval(botInstance.loopTimer2);
+            botInstance.loopTimer2 = null;
+        }
+
+        if (message && botInstance.recurringInterval2 > 0) {
+            botInstance.loopTimer2 = setInterval(() => {
+                if (botInstance.bot && botInstance.bot.chat) {
+                    botInstance.bot.chat(message);
+                }
+            }, botInstance.recurringInterval2 * 1000);
         }
         return true;
     }
@@ -256,7 +297,7 @@ class AFKBotManager {
         return { status: "error", message: "Bot aktif değil!" };
     }
 
-     getInventory(id) {
+    getInventory(id) {
         const botInstance = this.bots.get(id);
         if (botInstance && botInstance.bot && botInstance.bot.inventory) {
             let slots = {};
@@ -279,7 +320,8 @@ class AFKBotManager {
         if (!botInstance) return { status: "error", message: "Bot bulunamadı!" };
 
         if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
-        if (botInstance.loopTimer) clearInterval(botInstance.loopTimer);
+        if (botInstance.loopTimer1) clearInterval(botInstance.loopTimer1);
+        if (botInstance.loopTimer2) clearInterval(botInstance.loopTimer2);
         if (botInstance.bot) {
             try {
                 botInstance.bot.quit();
@@ -300,8 +342,10 @@ class AFKBotManager {
                 port: b.port,
                 version: b.version,
                 startupCommands: b.startupCommands,
-                recurringMsg: b.recurringMsg,
-                recurringInterval: b.recurringInterval
+                recurringMsg1: b.recurringMsg1,
+                recurringInterval1: b.recurringInterval1,
+                recurringMsg2: b.recurringMsg2,
+                recurringInterval2: b.recurringInterval2
             };
         }
         return list;
