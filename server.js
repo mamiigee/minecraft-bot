@@ -178,7 +178,10 @@ app.get('/', (req, res) => {
 
                             <div class="card">
                                 <h3>Bot Envanteri (Görsel Izgara)</h3>
-                                <button class="chat-btn" onclick="loadInventory('\${id}')">Envanteri Yenile</button>
+                                <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                                    <button class="chat-btn" onclick="loadInventory('\${id}')" style="flex: 1;">Envanteri Yenile</button>
+                                    <button class="stop" onclick="dropAll('\${id}')" style="flex: 1; margin: 0;">Hepsini Yere At</button>
+                                </div>
                                 <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #111; padding: 8px; border-radius: 6px; margin-top: 10px; max-width: fit-content;">
                                     <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
                                 </div>
@@ -276,7 +279,7 @@ app.get('/', (req, res) => {
                                 let itemUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/item/\${item.name}.png\`;
                                 let blockUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/block/\${item.name}.png\`;
                                 
-                                html += \`<div title="\${item.name} (Adet: \${item.count})" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer;">
+                                html += \`<div onclick="dropItem('\${id}', \${i})" title="\${item.name} (Adet: \${item.count}) - Atmak için tıkla" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: 0.1s;" onmouseover="this.style.borderColor='#f44336'" onmouseout="this.style.borderColor='#555'">
                                     <img src="\${itemUrl}" onerror="if(this.src.includes('/item/')) { this.src='\${blockUrl}'; } else { this.style.display='none'; this.nextElementSibling.style.display='block'; }" style="width: 24px; height: 24px; image-rendering: pixelated;" />
                                     <span style="display: none; font-size: 8px; color: #fff; text-align: center; overflow: hidden; width: 28px; word-break: break-all;">\${item.name.substring(0,3)}</span>
                                     <span style="position: absolute; bottom: 0px; right: 2px; color: #ffff55; font-weight: bold; font-size: 10px; text-shadow: 1px 1px #000;">\${item.count > 1 ? item.count : ''}</span>
@@ -289,6 +292,33 @@ app.get('/', (req, res) => {
                     } else {
                         grid.innerHTML = \`<span style="color:red; font-size:11px; grid-column: span 9;">\${json.message}</span>\`;
                     }
+                }
+
+                async function dropItem(id, slot) {
+                    if(!confirm(\`Slot \${slot} numaralı eşyayı yere atmak istediğinize emin misiniz?\`)) return;
+                    let res = await fetch('/drop', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id, slot })
+                    });
+                    let json = await res.json();
+                    if(json.status === "success") {
+                        setTimeout(() => loadInventory(id), 300);
+                    } else {
+                        alert(json.message);
+                    }
+                }
+
+                async function dropAll(id) {
+                    if(!confirm(\`Bot (\${id}) üzerindeki TÜM eşyaları yere atmak istediğinize emin misiniz?\`)) return;
+                    let res = await fetch('/drop-all', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id })
+                    });
+                    let json = await res.json();
+                    alert(json.message);
+                    setTimeout(() => loadInventory(id), 1000);
                 }
 
                 async function updateLoop1(id) {
@@ -434,6 +464,18 @@ app.post('/chat', (req, res) => {
     } else {
         res.json({ status: "error", message: "Bot aktif değil!" });
     }
+});
+
+app.post('/drop', (req, res) => {
+    const { id, slot } = req.body;
+    const result = manager.dropItem(id, parseInt(slot));
+    res.json(result);
+});
+
+app.post('/drop-all', (req, res) => {
+    const { id } = req.body;
+    const result = manager.dropAllItems(id);
+    res.json(result);
 });
 
 const PORT = process.env.PORT || 8080;
