@@ -12,591 +12,1192 @@ app.use(express.json());
 
 const originalLog = console.log;
 console.log = function(...args) {
-    originalLog.apply(console, args);
-    const text = args.join(' ');
-    const match = text.match(/\[BOT:(.*?)\]/);
-    if (match) {
-        const botId = match[1];
-        const cleanText = text.replace(`[BOT:${botId}]`, '').trim();
-        io.to(botId).emit('chatMessage', { botId, text: cleanText });
-    }
+    originalLog.apply(console, args);
+    const text = args.join(' ');
+    const match = text.match(/\[BOT:(.*?)\]/);
+    if (match) {
+        const botId = match[1];
+        const cleanText = text.replace(`[BOT:${botId}]`, '').trim();
+        io.to(botId).emit('chatMessage', { botId, text: cleanText });
+    }
 };
 
 const htmlPage = `
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <title>Dinamik Çoklu Minecraft Paneli</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; height: 95vh; box-sizing: border-box; }
-        .sidebar { width: 260px; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #333; overflow-y: auto; }
-        .main-content { flex: 1; display: flex; gap: 20px; background: #181818; padding: 20px; border-radius: 8px; border: 1px solid #333; overflow-y: auto; }
-        .bot-form-panel { flex: 1; overflow-y: auto; padding-right: 10px; }
-        .chat-panel { flex: 1; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; }
-        .card { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; }
-        input, button { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
-        button { background: #4CAF50; cursor: pointer; font-weight: bold; }
-        button.stop { background: #f44336; }
-        button.chat-btn { background: #2196F3; }
-        button.loop-btn { background: #ff9800; }
-        button.control-btn { background: #607D8B; transition: 0.1s; user-select: none; }
-        button.control-btn:active { background: #00BCD4; }
-        .bot-tab { padding: 10px; background: #2a2a2a; border-radius: 6px; cursor: pointer; border: 1px solid #444; text-align: center; font-weight: bold; transition: 0.2s; }
-        .bot-tab:hover, .bot-tab.active { background: #4CAF50; border-color: #66BB6A; }
-        .add-btn { background: #ff9800; }
-        #chatBox { background: #000; border: 1px solid #333; flex: 1; border-radius: 5px; padding: 12px; overflow-y: scroll; font-family: 'Courier New', Courier, monospace; color: #00ff00; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
-        h2, h3 { margin-top: 0; color: #4CAF50; }
-        label { font-size: 12px; color: #aaa; display: block; margin-top: 5px; }
-        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; text-align: center; width: 100%; }
-        .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px; margin: 10px auto; }
-    </style>
-    <script src="/socket.io/socket.io.js"></script>
+    <meta charset="UTF-8">
+    <title>Dinamik Çoklu Minecraft Paneli</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; height: 95vh; box-sizing: border-box; }
+        .sidebar { width: 260px; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #333; overflow-y: auto; }
+        .main-content { flex: 1; display: flex; gap: 20px; background: #181818; padding: 20px; border-radius: 8px; border: 1px solid #333; overflow-y: auto; }
+        .bot-form-panel { flex: 1; overflow-y: auto; padding-right: 10px; }
+        .chat-panel { flex: 1; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; }
+        .card { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; }
+        input, button { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
+        button { background: #4CAF50; cursor: pointer; font-weight: bold; }
+        button.stop { background: #f44336; }
+        button.chat-btn { background: #2196F3; }
+        button.loop-btn { background: #ff9800; }
+        button.control-btn { background: #607D8B; transition: 0.1s; user-select: none; }
+        button.control-btn:active { background: #00BCD4; }
+        .bot-tab { padding: 10px; background: #2a2a2a; border-radius: 6px; cursor: pointer; border: 1px solid #444; text-align: center; font-weight: bold; transition: 0.2s; }
+        .bot-tab:hover, .bot-tab.active { background: #4CAF50; border-color: #66BB6A; }
+        .add-btn { background: #ff9800; }
+        #chatBox { background: #000; border: 1px solid #333; flex: 1; border-radius: 5px; padding: 12px; overflow-y: scroll; font-family: 'Courier New', Courier, monospace; color: #00ff00; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+        h2, h3 { margin-top: 0; color: #4CAF50; }
+        label { font-size: 12px; color: #aaa; display: block; margin-top: 5px; }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; text-align: center; width: 100%; }
+        .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px; margin: 10px auto; }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div class="sidebar">
-        <h3>Botlar</h3>
-        <div id="botList"></div>
-        <button class="add-btn" onclick="showAddBotForm()">+ Yeni Bot Ekle</button>
-    </div>
+    <div class="sidebar">
+        <h3>Botlar</h3>
+        <div id="botList"></div>
+        <button class="add-btn" onclick="showAddBotForm()">+ Yeni Bot Ekle</button>
+    </div>
 
-    <div class="main-content" id="mainContainer">
-        <div class="empty-state">
-            <h2>Sunucuya girmek için yeni bot ekleyin</h2>
-            <p>Sol taraftaki "+ Yeni Bot Ekle" butonuna tıklayarak istediğiniz kadar bot yapılandırabilirsiniz.</p>
-        </div>
-    </div>
+    <div class="main-content" id="mainContainer">
+        <div class="empty-state">
+            <h2>Sunucuya girmek için yeni bot ekleyin</h2>
+            <p>Sol taraftaki "+ Yeni Bot Ekle" butonuna tıklayarak istediğiniz kadar bot yapılandırabilirsiniz.</p>
+        </div>
+    </div>
 
-    <script>
-        const socket = io();
-        let bots = {};
-        let chatHistories = {};
-        let currentActiveBot = null;
-        let mapInterval = null;
+    <script>
+        const socket = io();
+        let bots = {};
+        let chatHistories = {};
+        let currentActiveBot = null;
+        let mapInterval = null;
 
-        function showAddBotForm() {
-            currentActiveBot = null;
-            if(mapInterval) clearInterval(mapInterval);
-            updateBotList();
-            document.getElementById('mainContainer').innerHTML = \`
-                <div class="bot-form-panel">
-                    <h3>Yeni Bot Ekle ve Başlat</h3>
-                    <div class="card">
-                        <label>Bot ID (Örn: bot1, bot2, farm)</label>
-                        <input type="text" id="newId" placeholder="bot1">
-                        <label>Minecraft Nick</label>
-                        <input type="text" id="newUsername" placeholder="Kullanıcı Adı">
-                        <label>Sunucu IP</label>
-                        <input type="text" id="newHost" value="play.hanedanmc.com">
-                        <label>Port</label>
-                        <input type="text" id="newPort" value="25565">
-                        <label>Sürüm</label>
-                        <input type="text" id="newVersion" value="1.20.1">
-                        <label>Giriş Komutları (Virgülle ayırın)</label>
-                        <input type="text" id="newStartup" value="/login Sifre123, /skyblock">
-                        <label>Loop 1 Mesajı</label>
-                        <input type="text" id="newLoopMsg1" placeholder="Boş bırakılabilir">
-                        <label>Loop 1 Süresi (Saniye)</label>
-                        <input type="text" id="newLoopInterval1" value="60">
-                        <label>Loop 2 Mesajı</label>
-                        <input type="text" id="newLoopMsg2" placeholder="Boş bırakılabilir">
-                        <label>Loop 2 Süresi (Saniye)</label>
-                        <input type="text" id="newLoopInterval2" value="60">
-                        <button onclick="startNewBot()">Botu Başlat ve Kaydet</button>
-                    </div>
-                </div>
-            \`;
-        }
+        function showAddBotForm() {
+            currentActiveBot = null;
+            if(mapInterval) clearInterval(mapInterval);
+            updateBotList();
+            document.getElementById('mainContainer').innerHTML = \`
+                <div class="bot-form-panel">
+                    <h3>Yeni Bot Ekle ve Başlat</h3>
+                    <div class="card">
+                        <label>Bot ID (Örn: bot1, bot2, farm)</label>
+                        <input type="text" id="newId" placeholder="bot1">
+                        <label>Minecraft Nick</label>
+                        <input type="text" id="newUsername" placeholder="Kullanıcı Adı">
+                        <label>Sunucu IP</label>
+                        <input type="text" id="newHost" value="play.hanedanmc.com">
+                        <label>Port</label>
+                        <input type="text" id="newPort" value="25565">
+                        <label>Sürüm</label>
+                        <input type="text" id="newVersion" value="1.20.1">
+                        <label>Giriş Komutları (Virgülle ayırın)</label>
+                        <input type="text" id="newStartup" value="/login Sifre123, /skyblock">
+                        <label>Loop 1 Mesajı</label>
+                        <input type="text" id="newLoopMsg1" placeholder="Boş bırakılabilir">
+                        <label>Loop 1 Süresi (Saniye)</label>
+                        <input type="text" id="newLoopInterval1" value="60">
+                        <label>Loop 2 Mesajı</label>
+                        <input type="text" id="newLoopMsg2" placeholder="Boş bırakılabilir">
+                        <label>Loop 2 Süresi (Saniye)</label>
+                        <input type="text" id="newLoopInterval2" value="60">
+                        <button onclick="startNewBot()">Botu Başlat ve Kaydet</button>
+                    </div>
+                </div>
+            \`;
+        }
 
-        async function startNewBot() {
-            let id = document.getElementById('newId').value.trim();
-            if(!id) { alert("Bot ID boş olamaz!"); return; }
-            
-            let data = {
-                id: id,
-                username: document.getElementById('newUsername').value,
-                host: document.getElementById('newHost').value,
-                port: document.getElementById('newPort').value,
-                version: document.getElementById('newVersion').value,
-                startupCommands: document.getElementById('newStartup').value,
-                recurringMsg1: document.getElementById('newLoopMsg1').value,
-                recurringInterval1: document.getElementById('newLoopInterval1').value,
-                recurringMsg2: document.getElementById('newLoopMsg2').value,
-                recurringInterval2: document.getElementById('newLoopInterval2').value
-            };
+        async function startNewBot() {
+            let id = document.getElementById('newId').value.trim();
+            if(!id) { alert("Bot ID boş olamaz!"); return; }
+            
+            let data = {
+                id: id,
+                username: document.getElementById('newUsername').value,
+                host: document.getElementById('newHost').value,
+                port: document.getElementById('newPort').value,
+                version: document.getElementById('newVersion').value,
+                startupCommands: document.getElementById('newStartup').value,
+                recurringMsg1: document.getElementById('newLoopMsg1').value,
+                recurringInterval1: document.getElementById('newLoopInterval1').value,
+                recurringMsg2: document.getElementById('newLoopMsg2').value,
+                recurringInterval2: document.getElementById('newLoopInterval2').value
+            };
 
-            let res = await fetch('/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
-            let json = await res.json();
-            alert(json.message);
-            
-            if(json.status === "success") {
-                bots[id] = data;
-                updateBotList();
-                selectBot(id);
-            }
-        }
+            let res = await fetch('/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+            let json = await res.json();
+            alert(json.message);
+            
+            if(json.status === "success") {
+                bots[id] = data;
+                updateBotList();
+                selectBot(id);
+            }
+        }
 
-        function updateBotList() {
-            let listHtml = '';
-            for(let id in bots) {
-                let activeClass = (currentActiveBot === id) ? 'active' : '';
-                listHtml += \`<div class="bot-tab \${activeClass}" onclick="selectBot('\${id}')">\${id} (\${bots[id].username})</div>\`;
-            }
-            document.getElementById('botList').innerHTML = listHtml;
-        }
+        function updateBotList() {
+            let listHtml = '';
+            for(let id in bots) {
+                let activeClass = (currentActiveBot === id) ? 'active' : '';
+                listHtml += \`<div class="bot-tab \${activeClass}" onclick="selectBot('\${id}')">\${id} (\${bots[id].username})</div>\`;
+            }
+            document.getElementById('botList').innerHTML = listHtml;
+        }
 
-        function selectBot(id) {
-            currentActiveBot = id;
-            if(mapInterval) clearInterval(mapInterval);
-            updateBotList();
+        function selectBot(id) {
+            currentActiveBot = id;
+            if(mapInterval) clearInterval(mapInterval);
+            updateBotList();
 
-            document.getElementById('mainContainer').innerHTML = \`
-                <div class="bot-form-panel">
-                    <h3>Bot Yönetimi: \${id}</h3>
-                    <div class="card">
-                        <p><b>Kullanıcı:</b> \${bots[id].username}</p>
-                        <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
-                        <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
-                    </div>
+            document.getElementById('mainContainer').innerHTML = \`
+                <div class="bot-form-panel">
+                    <h3>Bot Yönetimi: \${id}</h3>
+                    <div class="card">
+                        <p><b>Kullanıcı:</b> \${bots[id].username}</p>
+                        <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
+                        <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
+                    </div>
 
-                    <div class="card">
-                        <h3>Canlı Harita (Radar)</h3>
-                        <canvas id="botMap" width="220" height="220" style="background: #111; border: 1px solid #444; border-radius: 4px; display: block; margin: 0 auto;"></canvas>
-                        <div id="coordText" style="text-align: center; font-size: 12px; color: #aaa; margin-top: 5px;">X: 0, Y: 0, Z: 0</div>
-                    </div>
+                    <div class="card">
+                        <h3>Canlı Harita (Radar)</h3>
+                        <canvas id="botMap" width="220" height="220" style="background: #111; border: 1px solid #444; border-radius: 4px; display: block; margin: 0 auto;"></canvas>
+                        <div id="coordText" style="text-align: center; font-size: 12px; color: #aaa; margin-top: 5px;">X: 0, Y: 0, Z: 0</div>
+                    </div>
 
-                    <div class="card">
-                        <h3>Bot Hareket Kontrolleri</h3>
-                        <div class="dpad">
-                            <div></div>
-                            <button class="control-btn" onmousedown="sendControl('\${id}', 'forward', true)" onmouseup="sendControl('\${id}', 'forward', false)" onmouseleave="sendControl('\${id}', 'forward', false)">İleri</button>
-                            <div></div>
-                            <button class="control-btn" onmousedown="sendControl('\${id}', 'left', true)" onmouseup="sendControl('\${id}', 'left', false)" onmouseleave="sendControl('\${id}', 'left', false)">Sol</button>
-                            <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
-                            <button class="control-btn" onmousedown="sendControl('\${id}', 'right', true)" onmouseup="sendControl('\${id}', 'right', false)" onmouseleave="sendControl('\${id}', 'right', false)">Sağ</button>
-                            <div></div>
-                            <button class="control-btn" onmousedown="sendControl('\${id}', 'back', true)" onmouseup="sendControl('\${id}', 'back', false)" onmouseleave="sendControl('\${id}', 'back', false)">Geri</button>
-                            <div></div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
-                            <button class="control-btn" onmousedown="sendControl('\${id}', 'sneak', true)" onmouseup="sendControl('\${id}', 'sneak', false)" onmouseleave="sendControl('\${id}', 'sneak', false)">Eğil (Sneak)</button>
-                            <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
-                        </div>
-                    </div>
+                    <div class="card">
+                        <h3>Bot Hareket Kontrolleri</h3>
+                        <div class="dpad">
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'forward', true)" onmouseup="sendControl('\${id}', 'forward', false)" onmouseleave="sendControl('\${id}', 'forward', false)">İleri</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'left', true)" onmouseup="sendControl('\${id}', 'left', false)" onmouseleave="sendControl('\${id}', 'left', false)">Sol</button>
+                            <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'right', true)" onmouseup="sendControl('\${id}', 'right', false)" onmouseleave="sendControl('\${id}', 'right', false)">Sağ</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'back', true)" onmouseup="sendControl('\${id}', 'back', false)" onmouseleave="sendControl('\${id}', 'back', false)">Geri</button>
+                            <div></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'sneak', true)" onmouseup="sendControl('\${id}', 'sneak', false)" onmouseleave="sendControl('\${id}', 'sneak', false)">Eğil (Sneak)</button>
+                            <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
+                        </div>
+                    </div>
 
-                    <div class="card">
-                        <h3>Bot Envanteri (Görsel Izgara)</h3>
-                        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
-                            <button class="chat-btn" onclick="loadInventory('\${id}')" style="flex: 1;">Envanteri Yenile</button>
-                            <button class="stop" onclick="dropAll('\${id}')" style="flex: 1; margin: 0;">Hepsini Yere At</button>
-                        </div>
-                        <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #111; padding: 8px; border-radius: 6px; margin-top: 10px; max-width: fit-content;">
-                            <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <h3>Anlık Mesaj Gönder</h3>
-                        <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
-                        <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
-                    </div>
-                    <div class="card">
-                        <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
-                        <label>Loop 1 Mesajı</label>
-                        <input type="text" id="loopMsgInput1" value="\${bots[id].recurringMsg1 || ''}" placeholder="Sürekli tekrarlanacak mesaj 1">
-                        <label>Süre (Saniye)</label>
-                        <input type="text" id="loopIntervalInput1" value="\${bots[id].recurringInterval1 || 60}" placeholder="60">
-                        <button class="loop-btn" onclick="updateLoop1('\${id}')">Döngü 1'i Güncelle</button>
-                    </div>
-                    <div class="card">
-                        <h3>Tekrarlayan Mesaj 2 (Loop 2)</h3>
-                        <label>Loop 2 Mesajı</label>
-                        <input type="text" id="loopMsgInput2" value="\${bots[id].recurringMsg2 || ''}" placeholder="Sürekli tekrarlanacak mesaj 2">
-                        <label>Süre (Saniye)</label>
-                        <input type="text" id="loopIntervalInput2" value="\${bots[id].recurringInterval2 || 60}" placeholder="60">
-                        <button class="loop-btn" onclick="updateLoop2('\${id}')">Döngü 2'yi Güncelle</button>
-                    </div>
-                </div>
-                <div class="chat-panel">
-                    <h3>\${id} - Canlı Konsol ve Chat</h3>
-                    <div id="chatBox"></div>
-                </div>
-            \`;
+                    <div class="card">
+                        <h3>Bot Envanteri (Görsel Izgara)</h3>
+                        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                            <button class="chat-btn" onclick="loadInventory('\${id}')" style="flex: 1;">Envanteri Yenile</button>
+                            <button class="stop" onclick="dropAll('\${id}')" style="flex: 1; margin: 0;">Hepsini Yere At</button>
+                        </div>
+                        <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #111; padding: 8px; border-radius: 6px; margin-top: 10px; max-width: fit-content;">
+                            <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Anlık Mesaj Gönder</h3>
+                        <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
+                        <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
+                    </div>
+                    <div class="card">
+                        <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
+                        <label>Loop 1 Mesajı</label>
+                        <input type="text" id="loopMsgInput1" value="\${bots[id].recurringMsg1 || ''}" placeholder="Sürekli tekrarlanacak mesaj 1">
+                        <label>Süre (Saniye)</label>
+                        <input type="text" id="loopIntervalInput1" value="\${bots[id].recurringInterval1 || 60}" placeholder="60">
+                        <button class="loop-btn" onclick="updateLoop1('\${id}')">Döngü 1'i Güncelle</button>
+                    </div>
+                    <div class="card">
+                        <h3>Tekrarlayan Mesaj 2 (Loop 2)</h3>
+                        <label>Loop 2 Mesajı</label>
+                        <input type="text" id="loopMsgInput2" value="\${bots[id].recurringMsg2 || ''}" placeholder="Sürekli tekrarlanacak mesaj 2">
+                        <label>Süre (Saniye)</label>
+                        <input type="text" id="loopIntervalInput2" value="\${bots[id].recurringInterval2 || 60}" placeholder="60">
+                        <button class="loop-btn" onclick="updateLoop2('\${id}')">Döngü 2'yi Güncelle</button>
+                    </div>
+                </div>
+                <div class="chat-panel">
+                    <h3>\${id} - Canlı Konsol ve Chat</h3>
+                    <div id="chatBox"></div>
+                </div>
+            \`;
 
-            const chatBox = document.getElementById('chatBox');
-            if (chatHistories[id]) {
-                chatBox.innerHTML = chatHistories[id];
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
+            const chatBox = document.getElementById('chatBox');
+            if (chatHistories[id]) {
+                chatBox.innerHTML = chatHistories[id];
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
 
-            socket.emit('joinBotRoom', id);
-            loadInventory(id);
-            startMapPolling(id);
-        }
+            socket.emit('joinBotRoom', id);
+            loadInventory(id);
+            startMapPolling(id);
+        }
 
-        function startMapPolling(id) {
-            updateMap(id);
-            mapInterval = setInterval(() => updateMap(id), 1000);
-        }
+        function startMapPolling(id) {
+            updateMap(id);
+            mapInterval = setInterval(() => updateMap(id), 1000);
+        }
 
-        async function updateMap(id) {
-            let res = await fetch('/position/' + id);
-            let json = await res.json();
-            const canvas = document.getElementById('botMap');
-            const coordText = document.getElementById('coordText');
-            if(!canvas || !coordText) return;
+        async function updateMap(id) {
+            let res = await fetch('/position/' + id);
+            let json = await res.json();
+            const canvas = document.getElementById('botMap');
+            const coordText = document.getElementById('coordText');
+            if(!canvas || !coordText) return;
 
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = '#1a1a1a';
-            ctx.lineWidth = 1;
-            for(let i = 0; i < canvas.width; i += 20) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-            }
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1;
+            for(let i = 0; i < canvas.width; i += 20) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
 
-            if(json.status === "success" && json.position) {
-                let { x, y, z, yaw, entities, blocks } = json.position;
-                coordText.innerText = \`X: \${x.toFixed(1)}, Y: \${y.toFixed(1)}, Z: \${z.toFixed(1)}\`;
+            if(json.status === "success" && json.position) {
+                let { x, y, z, yaw, entities, blocks } = json.position;
+                coordText.innerText = \`X: \${x.toFixed(1)}, Y: \${y.toFixed(1)}, Z: \${z.toFixed(1)}\`;
 
-                let cx = canvas.width / 2;
-                let cy = canvas.height / 2;
+                let cx = canvas.width / 2;
+                let cy = canvas.height / 2;
 
-                ctx.save();
-                ctx.translate(cx, cy);
-                if(yaw !== undefined) {
-                    ctx.rotate(-yaw);
-                }
+                ctx.save();
+                ctx.translate(cx, cy);
+                if(yaw !== undefined) {
+                    ctx.rotate(-yaw);
+                }
 
-                if (blocks && blocks.length > 0) {
-                    blocks.forEach(b => {
-                        let relX = (b.x - x) * 4;
-                        let relZ = (b.z - z) * 4;
+                if (blocks && blocks.length > 0) {
+                    blocks.forEach(b => {
+                        let relX = (b.x - x) * 4;
+                        let relZ = (b.z - z) * 4;
 
-                        if (Math.abs(relX) < cx + 10 && Math.abs(relZ) < cy + 10) {
-                            ctx.fillStyle = getBlockColor(b.name);
-                            ctx.fillRect(relX - 2, relZ - 2, 4, 4);
-                        }
-                    });
-                }
+                        if (Math.abs(relX) < cx + 10 && Math.abs(relZ) < cy + 10) {
+                            ctx.fillStyle = getBlockColor(b.name);
+                            ctx.fillRect(relX - 2, relZ - 2, 4, 4);
+                        }
+                    });
+                }
 
-                if (entities && entities.length > 0) {
-                    entities.forEach(e => {
-                        let relX = (e.x - x) * 4;
-                        let relZ = (e.z - z) * 4;
+                if (entities && entities.length > 0) {
+                    entities.forEach(e => {
+                        let relX = (e.x - x) * 4;
+                        let relZ = (e.z - z) * 4;
 
-                        if (Math.abs(relX) < cx && Math.abs(relZ) < cy) {
-                            ctx.save();
-                            ctx.translate(relX, relZ);
-                            ctx.fillStyle = e.type === 'player' ? '#2196F3' : '#ff9800';
-                            ctx.beginPath();
-                            ctx.arc(0, 0, 3, 0, Math.PI * 2);
-                            ctx.fill();
-                            ctx.restore();
-                        }
-                    });
-                }
+                        if (Math.abs(relX) < cx && Math.abs(relZ) < cy) {
+                            ctx.save();
+                            ctx.translate(relX, relZ);
+                            ctx.fillStyle = e.type === 'player' ? '#2196F3' : '#ff9800';
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    });
+                }
 
-                ctx.fillStyle = '#4CAF50';
-                ctx.beginPath();
-                ctx.moveTo(0, -8);
-                ctx.lineTo(-6, 8);
-                ctx.lineTo(6, 8);
-                ctx.closePath();
-                ctx.fill();
-                ctx.restore();
+                ctx.fillStyle = '#4CAF50';
+                ctx.beginPath();
+                ctx.moveTo(0, -8);
+                ctx.lineTo(-6, 8);
+                ctx.lineTo(6, 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
 
-                ctx.fillStyle = '#fff';
-                ctx.beginPath();
-                ctx.arc(cx, cy, 2, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                coordText.innerText = "Konum alınamadı (Bot offline)";
-                ctx.fillStyle = '#777';
-                ctx.font = '11px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText("Bot Aktif Değil", canvas.width / 2, canvas.height / 2);
-            }
-        }
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                coordText.innerText = "Konum alınamadı (Bot offline)";
+                ctx.fillStyle = '#777';
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText("Bot Aktif Değil", canvas.width / 2, canvas.height / 2);
+            }
+        }
 
-        function getBlockColor(name) {
-            if (name.includes('water')) return '#3b82f6';
-            if (name.includes('grass') || name.includes('leaves')) return '#22c55e';
-            if (name.includes('sand')) return '#eab308';
-            if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return '#71717a';
-            if (name.includes('log') || name.includes('wood') || name.includes('planks')) return '#78350f';
-            if (name.includes('dirt')) return '#a16207';
-            return '#444444';
-        }
+        function getBlockColor(name) {
+            if (name.includes('water')) return '#3b82f6';
+            if (name.includes('grass') || name.includes('leaves')) return '#22c55e';
+            if (name.includes('sand')) return '#eab308';
+            if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return '#71717a';
+            if (name.includes('log') || name.includes('wood') || name.includes('planks')) return '#78350f';
+            if (name.includes('dirt')) return '#a16207';
+            return '#444444';
+        }
 
-        socket.off('chatMessage');
-        socket.on('chatMessage', function(data) {
-            const { botId, text } = data;
-            if (!chatHistories[botId]) {
-                chatHistories[botId] = '';
-            }
-            chatHistories[botId] += text + "\\n";
-            
-            if (currentActiveBot === botId) {
-                const chatBox = document.getElementById('chatBox');
-                if(chatBox) {
-                    chatBox.innerHTML = chatHistories[botId];
-                    chatBox.scrollTop = chatBox.scrollHeight;
-                }
-            }
-        });
+        socket.off('chatMessage');
+        socket.on('chatMessage', function(data) {
+            const { botId, text } = data;
+            if (!chatHistories[botId]) {
+                chatHistories[botId] = '';
+            }
+            chatHistories[botId] += text + "\\n";
+            
+            if (currentActiveBot === botId) {
+                const chatBox = document.getElementById('chatBox');
+                if(chatBox) {
+                    chatBox.innerHTML = chatHistories[botId];
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            }
+        });
 
-        async function sendControl(id, control, status) {
-            await fetch('/control', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id, control, status })
-            });
-        }
+        async function sendControl(id, control, status) {
+            await fetch('/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, control, status })
+            });
+        }
 
-        async function sendJump(id) {
-            await fetch('/jump', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id })
-            });
-        }
+        async function sendJump(id) {
+            await fetch('/jump', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+        }
 
-        async function clearBotControls(id) {
-            await fetch('/clear-controls', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id })
-            });
-        }
+        async function clearBotControls(id) {
+            await fetch('/clear-controls', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+        }
 
-        async function loadInventory(id) {
-            let res = await fetch('/inventory/' + id);
-            let json = await res.json();
-            const grid = document.getElementById('inventoryGrid');
-            if(!grid) return;
+        async function loadInventory(id) {
+            let res = await fetch('/inventory/' + id);
+            let json = await res.json();
+            const grid = document.getElementById('inventoryGrid');
+            if(!grid) return;
 
-            if(json.status === "success") {
-                let html = '';
-                for(let i = 9; i <= 44; i++) {
-                    let item = json.items[i];
-                    if(item) {
-                        let itemUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/item/\${item.name}.png\`;
-                        let blockUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/block/\${item.name}.png\`;
-                        
-                        html += \`<div onclick="dropItem('\${id}', \${i})" title="\${item.name} (Adet: \${item.count}) - Atmak için tıkla" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: 0.1s;" onmouseover="this.style.borderColor='#f44336'" onmouseout="this.style.borderColor='#555'">
-                            <img src="\${itemUrl}" onerror="if(this.src.includes('/item/')) { this.src='\${blockUrl}'; } else { this.style.display='none'; this.nextElementSibling.style.display='block'; }" style="width: 24px; height: 24px; image-rendering: pixelated;" />
-                            <span style="display: none; font-size: 8px; color: #fff; text-align: center; overflow: hidden; width: 28px; word-break: break-all;">\${item.name.substring(0,3)}</span>
-                            <span style="position: absolute; bottom: 0px; right: 2px; color: #ffff55; font-weight: bold; font-size: 10px; text-shadow: 1px 1px #000;">\${item.count > 1 ? item.count : ''}</span>
-                        </div>\`;
-                    } else {
-                        html += \`<div style="width: 32px; height: 32px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;"></div>\`;
-                    }
-                }
-                grid.innerHTML = html;
-            } else {
-                grid.innerHTML = \`<span style="color:red; font-size:11px; grid-column: span 9;">\${json.message}</span>\`;
-            }
-        }
+            if(json.status === "success") {
+                let html = '';
+                for(let i = 9; i <= 44; i++) {
+                    let item = json.items[i];
+                    if(item) {
+                        let itemUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/item/\${item.name}.png\`;
+                        let blockUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/block/\${item.name}.png\`;
+                        
+                        html += \`<div onclick="dropItem('\${id}', \${i})" title="\${item.name} (Adet: \${item.count}) - Atmak için tıkla" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: 0.1s;" onmouseover="this.style.borderColor='#f44336'" onmouseout="this.style.borderColor='#555'">
+                            <img src="\${itemUrl}" onerror="if(this.src.includes('/item/')) { this.src='\${blockUrl}'; } else { this.style.display='none'; this.nextElementSibling.style.display='block'; }" style="width: 24px; height: 24px; image-rendering: pixelated;" />
+                            <span style="display: none; font-size: 8px; color: #fff; text-align: center; overflow: hidden; width: 28px; word-break: break-all;">\${item.name.substring(0,3)}</span>
+                            <span style="position: absolute; bottom: 0px; right: 2px; color: #ffff55; font-weight: bold; font-size: 10px; text-shadow: 1px 1px #000;">\${item.count > 1 ? item.count : ''}</span>
+                        </div>\`;
+                    } else {
+                        html += \`<div style="width: 32px; height: 32px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;"></div>\`;
+                    }
+                }
+                grid.innerHTML = html;
+            } else {
+                grid.innerHTML = \`<span style="color:red; font-size:11px; grid-column: span 9;">\${json.message}</span>\`;
+            }
+        }
 
-        async function dropItem(id, slot) {
-            if(!confirm(\`Slot \${slot} numaralı eşyayı yere atmak istediğinize emin misiniz?\`)) return;
-            let res = await fetch('/drop', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id, slot })
-            });
-            let json = await res.json();
-            if(json.status === "success") {
-                setTimeout(() => loadInventory(id), 300);
-            } else {
-                alert(json.message);
-            }
-        }
+        async function dropItem(id, slot) {
+            if(!confirm(\`Slot \${slot} numaralı eşyayı yere atmak istediğinize emin misiniz?\`)) return;
+            let res = await fetch('/drop', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, slot })
+            });
+            let json = await res.json();
+            if(json.status === "success") {
+                setTimeout(() => loadInventory(id), 300);
+            } else {
+                alert(json.message);
+            }
+        }
 
-        async function dropAll(id) {
-            if(!confirm(\`Bot (\${id}) üzerindeki TÜM eşyaları yere atmak istediğinize emin misiniz?\`)) return;
-            let res = await fetch('/drop-all', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id })
-            });
-            let json = await res.json();
-            alert(json.message);
-            setTimeout(() => loadInventory(id), 1000);
-        }
+        async function dropAll(id) {
+            if(!confirm(\`Bot (\${id}) üzerindeki TÜM eşyaları yere atmak istediğinize emin misiniz?\`)) return;
+            let res = await fetch('/drop-all', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+            let json = await res.json();
+            alert(json.message);
+            setTimeout(() => loadInventory(id), 1000);
+        }
 
-        async function updateLoop1(id) {
-            let msg = document.getElementById('loopMsgInput1').value;
-            let interval = document.getElementById('loopIntervalInput1').value;
-            
-            bots[id].recurringMsg1 = msg;
-            bots[id].recurringInterval1 = interval;
+        async function updateLoop1(id) {
+            let msg = document.getElementById('loopMsgInput1').value;
+            let interval = document.getElementById('loopIntervalInput1').value;
+            
+            bots[id].recurringMsg1 = msg;
+            bots[id].recurringInterval1 = interval;
 
-            let res = await fetch('/loop1', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
-            let json = await res.json();
-            alert(json.message);
-        }
+            let res = await fetch('/loop1', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
+            let json = await res.json();
+            alert(json.message);
+        }
 
-        async function updateLoop2(id) {
-            let msg = document.getElementById('loopMsgInput2').value;
-            let interval = document.getElementById('loopIntervalInput2').value;
-            
-            bots[id].recurringMsg2 = msg;
-            bots[id].recurringInterval2 = interval;
+        async function updateLoop2(id) {
+            let msg = document.getElementById('loopMsgInput2').value;
+            let interval = document.getElementById('loopIntervalInput2').value;
+            
+            bots[id].recurringMsg2 = msg;
+            bots[id].recurringInterval2 = interval;
 
-            let res = await fetch('/loop2', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
-            let json = await res.json();
-            alert(json.message);
-        }
+            let res = await fetch('/loop2', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
+            let json = await res.json();
+            alert(json.message);
+        }
 
-        async function stopBot(id) {
-            if(mapInterval) clearInterval(mapInterval);
-            let res = await fetch('/stop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
-            let json = await res.json();
-            alert(json.message);
-            delete bots[id];
-            delete chatHistories[id];
-            updateBotList();
-            showAddBotForm();
-        }
+        async function stopBot(id) {
+            if(mapInterval) clearInterval(mapInterval);
+            let res = await fetch('/stop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
+            let json = await res.json();
+            alert(json.message);
+            delete bots[id];
+            delete chatHistories[id];
+            updateBotList();
+            showAddBotForm();
+        }
 
-        async function sendChat(id) {
-            let msg = document.getElementById('manualMsg').value;
-            if(!msg) return;
-            let res = await fetch('/chat', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg})});
-            let json = await res.json();
-            if(json.status === "success") {
-                document.getElementById('manualMsg').value = '';
-            } else {
-                alert(json.message);
-            }
-        }
+        async function sendChat(id) {
+            let msg = document.getElementById('manualMsg').value;
+            if(!msg) return;
+            let res = await fetch('/chat', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg})});
+            let json = await res.json();
+            if(json.status === "success") {
+                document.getElementById('manualMsg').value = '';
+            } else {
+                alert(json.message);
+            }
+        }
 
-        async function init() {
-            let res = await fetch('/bots');
-            let activeBots = await res.json();
-            bots = activeBots;
-            updateBotList();
-            let keys = Object.keys(bots);
-            if(keys.length > 0) {
-                selectBot(keys[0]);
-            } else {
-                showAddBotForm();
-            }
-        }
+        async function init() {
+            let res = await fetch('/bots');
+            let activeBots = await res.json();
+            bots = activeBots;
+            updateBotList();
+            let keys = Object.keys(bots);
+            if(keys.length > 0) {
+                selectBot(keys[0]);
+            } else {
+                showAddBotForm();
+            }
+        }
 
-        init();
-    </script>
+        init();
+    </script>
 </body>
 </html>
 `;
 
 app.get('/', (req, res) => {
-    res.send(htmlPage);
+    res.send(htmlPage);
 });
 
 io.on('connection', (socket) => {
-    socket.on('joinBotRoom', (botId) => {
-        socket.join(botId);
-    });
+    socket.on('joinBotRoom', (botId) => {
+        socket.join(botId);
+    });
 });
 
 app.get('/bots', (req, res) => {
-    res.json(manager.getActiveBots());
+    res.json(manager.getActiveBots());
 });
 
 app.get('/inventory/:id', (req, res) => {
-    const items = manager.getInventory(req.params.id);
-    if (items) {
-        res.json({ status: "success", items });
-    } else {
-        res.json({ status: "error", message: "Bot aktif değil!" });
-    }
+    const items = manager.getInventory(req.params.id);
+    if (items) {
+        res.json({ status: "success", items });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil!" });
+    }
 });
 
 app.get('/position/:id', (req, res) => {
-    const pos = manager.getPosition ? manager.getPosition(req.params.id) : null;
-    if (pos) {
-        res.json({ status: "success", position: pos });
-    } else {
-        res.json({ status: "error", message: "Bot aktif değil veya konum alınamadı!" });
-    }
+    const pos = manager.getPosition ? manager.getPosition(req.params.id) : null;
+    if (pos) {
+        res.json({ status: "success", position: pos });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil veya konum alınamadı!" });
+    }
 });
 
 app.post('/start', (req, res) => {
-    const { id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2 } = req.body;
-    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true);
-    res.json(result);
+    const { id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2 } = req.body;
+    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2);
+    res.json(result);
 });
 
 app.post('/control', (req, res) => {
-    const { id, control, status } = req.body;
-    const result = manager.setControlState(id, control, status);
-    res.json(result);
+    const { id, control, status } = req.body;
+    const result = manager.setControlState(id, control, status);
+    res.json(result);
 });
 
 app.post('/jump', (req, res) => {
-    const { id } = req.body;
-    const result = manager.jump(id);
-    res.json(result);
+    const { id } = req.body;
+    const result = manager.jump(id);
+    res.json(result);
 });
 
 app.post('/clear-controls', (req, res) => {
-    const { id } = req.body;
-    const result = manager.clearControls(id);
-    res.json(result);
+    const { id } = req.body;
+    const result = manager.clearControls(id);
+    res.json(result);
 });
 
 app.post('/loop1', (req, res) => {
-    const { id, message, interval } = req.body;
-    const success = manager.setLoop1(id, message, parseInt(interval));
-    if (success) {
-        res.json({ status: "success", message: "Tekrarlayan mesaj 1 güncellendi!" });
-    } else {
-        res.json({ status: "error", message: "Bot bulunamadı!" });
-    }
+    const { id, message, interval } = req.body;
+    const success = manager.setLoop1(id, message, parseInt(interval));
+    if (success) {
+        res.json({ status: "success", message: "Tekrarlayan mesaj 1 güncellendi!" });
+    } else {
+        res.json({ status: "error", message: "Bot bulunamadı!" });
+    }
 });
 
 app.post('/loop2', (req, res) => {
-    const { id, message, interval } = req.body;
-    const success = manager.setLoop2(id, message, parseInt(interval));
-    if (success) {
-        res.json({ status: "success", message: "Tekrarlayan mesaj 2 güncellendi!" });
-    } else {
-        res.json({ status: "error", message: "Bot bulunamadı!" });
-    }
+    const { id, message, interval } = req.body;
+    const success = manager.setLoop2(id, message, parseInt(interval));
+    if (success) {
+        res.json({ status: "success", message: "Tekrarlayan mesaj 2 güncellendi!" });
+    } else {
+        res.json({ status: "error", message: "Bot bulunamadı!" });
+    }
 });
 
 app.post('/stop', (req, res) => {
-    const { id } = req.body;
-    const result = manager.stopBot(id);
-    res.json(result);
+    const { id } = req.body;
+    const result = manager.stopBot(id);
+    res.json(result);
 });
 
 app.post('/chat', (req, res) => {
-    const { id, message } = req.body;
-    const success = manager.sendMessage(id, message);
-    if (success) {
-        res.json({ status: "success" });
-    } else {
-        res.json({ status: "error", message: "Bot aktif değil!" });
-    }
+    const { id, message } = req.body;
+    const success = manager.sendMessage(id, message);
+    if (success) {
+        res.json({ status: "success" });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil!" });
+    }
 });
 
 app.post('/drop', (req, res) => {
-    const { id, slot } = req.body;
-    const result = manager.dropItem(id, parseInt(slot));
-    res.json(result);
+    const { id, slot } = req.body;
+    const result = manager.dropItem(id, parseInt(slot));
+    res.json(result);
 });
 
 app.post('/drop-all', (req, res) => {
-    const { id } = req.body;
-    const result = manager.dropAllItems(id);
-    res.json(result);
+    const { id } = req.body;
+    const result = manager.dropAllItems(id);
+    res.json(result);
 });
 
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
-    console.log(`Panel çalışıyor: http://localhost:${PORT}`);
+    console.log(`Panel çalışıyor: http://localhost:${PORT}`);
+});const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const AFKBotManager = require('./bot');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+const manager = new AFKBotManager();
+
+app.use(express.json());
+
+const originalLog = console.log;
+console.log = function(...args) {
+    originalLog.apply(console, args);
+    const text = args.join(' ');
+    const match = text.match(/\[BOT:(.*?)\]/);
+    if (match) {
+        const botId = match[1];
+        const cleanText = text.replace(`[BOT:${botId}]`, '').trim();
+        io.to(botId).emit('chatMessage', { botId, text: cleanText });
+    }
+};
+
+const htmlPage = `
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dinamik Çoklu Minecraft Paneli</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; height: 95vh; box-sizing: border-box; }
+        .sidebar { width: 260px; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #333; overflow-y: auto; }
+        .main-content { flex: 1; display: flex; gap: 20px; background: #181818; padding: 20px; border-radius: 8px; border: 1px solid #333; overflow-y: auto; }
+        .bot-form-panel { flex: 1; overflow-y: auto; padding-right: 10px; }
+        .chat-panel { flex: 1; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; }
+        .card { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; }
+        input, button { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
+        button { background: #4CAF50; cursor: pointer; font-weight: bold; }
+        button.stop { background: #f44336; }
+        button.chat-btn { background: #2196F3; }
+        button.loop-btn { background: #ff9800; }
+        button.control-btn { background: #607D8B; transition: 0.1s; user-select: none; }
+        button.control-btn:active { background: #00BCD4; }
+        .bot-tab { padding: 10px; background: #2a2a2a; border-radius: 6px; cursor: pointer; border: 1px solid #444; text-align: center; font-weight: bold; transition: 0.2s; }
+        .bot-tab:hover, .bot-tab.active { background: #4CAF50; border-color: #66BB6A; }
+        .add-btn { background: #ff9800; }
+        #chatBox { background: #000; border: 1px solid #333; flex: 1; border-radius: 5px; padding: 12px; overflow-y: scroll; font-family: 'Courier New', Courier, monospace; color: #00ff00; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+        h2, h3 { margin-top: 0; color: #4CAF50; }
+        label { font-size: 12px; color: #aaa; display: block; margin-top: 5px; }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; text-align: center; width: 100%; }
+        .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px; margin: 10px auto; }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Botlar</h3>
+        <div id="botList"></div>
+        <button class="add-btn" onclick="showAddBotForm()">+ Yeni Bot Ekle</button>
+    </div>
+
+    <div class="main-content" id="mainContainer">
+        <div class="empty-state">
+            <h2>Sunucuya girmek için yeni bot ekleyin</h2>
+            <p>Sol taraftaki "+ Yeni Bot Ekle" butonuna tıklayarak istediğiniz kadar bot yapılandırabilirsiniz.</p>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let bots = {};
+        let chatHistories = {};
+        let currentActiveBot = null;
+        let mapInterval = null;
+
+        function showAddBotForm() {
+            currentActiveBot = null;
+            if(mapInterval) clearInterval(mapInterval);
+            updateBotList();
+            document.getElementById('mainContainer').innerHTML = \`
+                <div class="bot-form-panel">
+                    <h3>Yeni Bot Ekle ve Başlat</h3>
+                    <div class="card">
+                        <label>Bot ID (Örn: bot1, bot2, farm)</label>
+                        <input type="text" id="newId" placeholder="bot1">
+                        <label>Minecraft Nick</label>
+                        <input type="text" id="newUsername" placeholder="Kullanıcı Adı">
+                        <label>Sunucu IP</label>
+                        <input type="text" id="newHost" value="play.hanedanmc.com">
+                        <label>Port</label>
+                        <input type="text" id="newPort" value="25565">
+                        <label>Sürüm</label>
+                        <input type="text" id="newVersion" value="1.20.1">
+                        <label>Giriş Komutları (Virgülle ayırın)</label>
+                        <input type="text" id="newStartup" value="/login Sifre123, /skyblock">
+                        <label>Loop 1 Mesajı</label>
+                        <input type="text" id="newLoopMsg1" placeholder="Boş bırakılabilir">
+                        <label>Loop 1 Süresi (Saniye)</label>
+                        <input type="text" id="newLoopInterval1" value="60">
+                        <label>Loop 2 Mesajı</label>
+                        <input type="text" id="newLoopMsg2" placeholder="Boş bırakılabilir">
+                        <label>Loop 2 Süresi (Saniye)</label>
+                        <input type="text" id="newLoopInterval2" value="60">
+                        <button onclick="startNewBot()">Botu Başlat ve Kaydet</button>
+                    </div>
+                </div>
+            \`;
+        }
+
+        async function startNewBot() {
+            let id = document.getElementById('newId').value.trim();
+            if(!id) { alert("Bot ID boş olamaz!"); return; }
+            
+            let data = {
+                id: id,
+                username: document.getElementById('newUsername').value,
+                host: document.getElementById('newHost').value,
+                port: document.getElementById('newPort').value,
+                version: document.getElementById('newVersion').value,
+                startupCommands: document.getElementById('newStartup').value,
+                recurringMsg1: document.getElementById('newLoopMsg1').value,
+                recurringInterval1: document.getElementById('newLoopInterval1').value,
+                recurringMsg2: document.getElementById('newLoopMsg2').value,
+                recurringInterval2: document.getElementById('newLoopInterval2').value
+            };
+
+            let res = await fetch('/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+            let json = await res.json();
+            alert(json.message);
+            
+            if(json.status === "success") {
+                bots[id] = data;
+                updateBotList();
+                selectBot(id);
+            }
+        }
+
+        function updateBotList() {
+            let listHtml = '';
+            for(let id in bots) {
+                let activeClass = (currentActiveBot === id) ? 'active' : '';
+                listHtml += \`<div class="bot-tab \${activeClass}" onclick="selectBot('\${id}')">\${id} (\${bots[id].username})</div>\`;
+            }
+            document.getElementById('botList').innerHTML = listHtml;
+        }
+
+        function selectBot(id) {
+            currentActiveBot = id;
+            if(mapInterval) clearInterval(mapInterval);
+            updateBotList();
+
+            document.getElementById('mainContainer').innerHTML = \`
+                <div class="bot-form-panel">
+                    <h3>Bot Yönetimi: \${id}</h3>
+                    <div class="card">
+                        <p><b>Kullanıcı:</b> \${bots[id].username}</p>
+                        <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
+                        <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>Canlı Harita (Radar)</h3>
+                        <canvas id="botMap" width="220" height="220" style="background: #111; border: 1px solid #444; border-radius: 4px; display: block; margin: 0 auto;"></canvas>
+                        <div id="coordText" style="text-align: center; font-size: 12px; color: #aaa; margin-top: 5px;">X: 0, Y: 0, Z: 0</div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Bot Hareket Kontrolleri</h3>
+                        <div class="dpad">
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'forward', true)" onmouseup="sendControl('\${id}', 'forward', false)" onmouseleave="sendControl('\${id}', 'forward', false)">İleri</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'left', true)" onmouseup="sendControl('\${id}', 'left', false)" onmouseleave="sendControl('\${id}', 'left', false)">Sol</button>
+                            <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'right', true)" onmouseup="sendControl('\${id}', 'right', false)" onmouseleave="sendControl('\${id}', 'right', false)">Sağ</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'back', true)" onmouseup="sendControl('\${id}', 'back', false)" onmouseleave="sendControl('\${id}', 'back', false)">Geri</button>
+                            <div></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'sneak', true)" onmouseup="sendControl('\${id}', 'sneak', false)" onmouseleave="sendControl('\${id}', 'sneak', false)">Eğil (Sneak)</button>
+                            <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Bot Envanteri (Görsel Izgara)</h3>
+                        <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                            <button class="chat-btn" onclick="loadInventory('\${id}')" style="flex: 1;">Envanteri Yenile</button>
+                            <button class="stop" onclick="dropAll('\${id}')" style="flex: 1; margin: 0;">Hepsini Yere At</button>
+                        </div>
+                        <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #111; padding: 8px; border-radius: 6px; margin-top: 10px; max-width: fit-content;">
+                            <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Anlık Mesaj Gönder</h3>
+                        <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
+                        <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
+                    </div>
+                    <div class="card">
+                        <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
+                        <label>Loop 1 Mesajı</label>
+                        <input type="text" id="loopMsgInput1" value="\${bots[id].recurringMsg1 || ''}" placeholder="Sürekli tekrarlanacak mesaj 1">
+                        <label>Süre (Saniye)</label>
+                        <input type="text" id="loopIntervalInput1" value="\${bots[id].recurringInterval1 || 60}" placeholder="60">
+                        <button class="loop-btn" onclick="updateLoop1('\${id}')">Döngü 1'i Güncelle</button>
+                    </div>
+                    <div class="card">
+                        <h3>Tekrarlayan Mesaj 2 (Loop 2)</h3>
+                        <label>Loop 2 Mesajı</label>
+                        <input type="text" id="loopMsgInput2" value="\${bots[id].recurringMsg2 || ''}" placeholder="Sürekli tekrarlanacak mesaj 2">
+                        <label>Süre (Saniye)</label>
+                        <input type="text" id="loopIntervalInput2" value="\${bots[id].recurringInterval2 || 60}" placeholder="60">
+                        <button class="loop-btn" onclick="updateLoop2('\${id}')">Döngü 2'yi Güncelle</button>
+                    </div>
+                </div>
+                <div class="chat-panel">
+                    <h3>\${id} - Canlı Konsol ve Chat</h3>
+                    <div id="chatBox"></div>
+                </div>
+            \`;
+
+            const chatBox = document.getElementById('chatBox');
+            if (chatHistories[id]) {
+                chatBox.innerHTML = chatHistories[id];
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            socket.emit('joinBotRoom', id);
+            loadInventory(id);
+            startMapPolling(id);
+        }
+
+        function startMapPolling(id) {
+            updateMap(id);
+            mapInterval = setInterval(() => updateMap(id), 1000);
+        }
+
+        async function updateMap(id) {
+            let res = await fetch('/position/' + id);
+            let json = await res.json();
+            const canvas = document.getElementById('botMap');
+            const coordText = document.getElementById('coordText');
+            if(!canvas || !coordText) return;
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = '#1a1a1a';
+            ctx.lineWidth = 1;
+            for(let i = 0; i < canvas.width; i += 20) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+
+            if(json.status === "success" && json.position) {
+                let { x, y, z, yaw, entities, blocks } = json.position;
+                coordText.innerText = \`X: \${x.toFixed(1)}, Y: \${y.toFixed(1)}, Z: \${z.toFixed(1)}\`;
+
+                let cx = canvas.width / 2;
+                let cy = canvas.height / 2;
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                if(yaw !== undefined) {
+                    ctx.rotate(-yaw);
+                }
+
+                if (blocks && blocks.length > 0) {
+                    blocks.forEach(b => {
+                        let relX = (b.x - x) * 4;
+                        let relZ = (b.z - z) * 4;
+
+                        if (Math.abs(relX) < cx + 10 && Math.abs(relZ) < cy + 10) {
+                            ctx.fillStyle = getBlockColor(b.name);
+                            ctx.fillRect(relX - 2, relZ - 2, 4, 4);
+                        }
+                    });
+                }
+
+                if (entities && entities.length > 0) {
+                    entities.forEach(e => {
+                        let relX = (e.x - x) * 4;
+                        let relZ = (e.z - z) * 4;
+
+                        if (Math.abs(relX) < cx && Math.abs(relZ) < cy) {
+                            ctx.save();
+                            ctx.translate(relX, relZ);
+                            ctx.fillStyle = e.type === 'player' ? '#2196F3' : '#ff9800';
+                            ctx.beginPath();
+                            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    });
+                }
+
+                ctx.fillStyle = '#4CAF50';
+                ctx.beginPath();
+                ctx.moveTo(0, -8);
+                ctx.lineTo(-6, 8);
+                ctx.lineTo(6, 8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                coordText.innerText = "Konum alınamadı (Bot offline)";
+                ctx.fillStyle = '#777';
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText("Bot Aktif Değil", canvas.width / 2, canvas.height / 2);
+            }
+        }
+
+        function getBlockColor(name) {
+            if (name.includes('water')) return '#3b82f6';
+            if (name.includes('grass') || name.includes('leaves')) return '#22c55e';
+            if (name.includes('sand')) return '#eab308';
+            if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return '#71717a';
+            if (name.includes('log') || name.includes('wood') || name.includes('planks')) return '#78350f';
+            if (name.includes('dirt')) return '#a16207';
+            return '#444444';
+        }
+
+        socket.off('chatMessage');
+        socket.on('chatMessage', function(data) {
+            const { botId, text } = data;
+            if (!chatHistories[botId]) {
+                chatHistories[botId] = '';
+            }
+            chatHistories[botId] += text + "\\n";
+            
+            if (currentActiveBot === botId) {
+                const chatBox = document.getElementById('chatBox');
+                if(chatBox) {
+                    chatBox.innerHTML = chatHistories[botId];
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            }
+        });
+
+        async function sendControl(id, control, status) {
+            await fetch('/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, control, status })
+            });
+        }
+
+        async function sendJump(id) {
+            await fetch('/jump', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+        }
+
+        async function clearBotControls(id) {
+            await fetch('/clear-controls', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+        }
+
+        async function loadInventory(id) {
+            let res = await fetch('/inventory/' + id);
+            let json = await res.json();
+            const grid = document.getElementById('inventoryGrid');
+            if(!grid) return;
+
+            if(json.status === "success") {
+                let html = '';
+                for(let i = 9; i <= 44; i++) {
+                    let item = json.items[i];
+                    if(item) {
+                        let itemUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/item/\${item.name}.png\`;
+                        let blockUrl = \`https://raw.githubusercontent.com/InventivetalentDev/minecraft-assets/1.20.1/assets/minecraft/textures/block/\${item.name}.png\`;
+                        
+                        html += \`<div onclick="dropItem('\${id}', \${i})" title="\${item.name} (Adet: \${item.count}) - Atmak için tıkla" style="width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer; transition: 0.1s;" onmouseover="this.style.borderColor='#f44336'" onmouseout="this.style.borderColor='#555'">
+                            <img src="\${itemUrl}" onerror="if(this.src.includes('/item/')) { this.src='\${blockUrl}'; } else { this.style.display='none'; this.nextElementSibling.style.display='block'; }" style="width: 24px; height: 24px; image-rendering: pixelated;" />
+                            <span style="display: none; font-size: 8px; color: #fff; text-align: center; overflow: hidden; width: 28px; word-break: break-all;">\${item.name.substring(0,3)}</span>
+                            <span style="position: absolute; bottom: 0px; right: 2px; color: #ffff55; font-weight: bold; font-size: 10px; text-shadow: 1px 1px #000;">\${item.count > 1 ? item.count : ''}</span>
+                        </div>\`;
+                    } else {
+                        html += \`<div style="width: 32px; height: 32px; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;"></div>\`;
+                    }
+                }
+                grid.innerHTML = html;
+            } else {
+                grid.innerHTML = \`<span style="color:red; font-size:11px; grid-column: span 9;">\${json.message}</span>\`;
+            }
+        }
+
+        async function dropItem(id, slot) {
+            if(!confirm(\`Slot \${slot} numaralı eşyayı yere atmak istediğinize emin misiniz?\`)) return;
+            let res = await fetch('/drop', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, slot })
+            });
+            let json = await res.json();
+            if(json.status === "success") {
+                setTimeout(() => loadInventory(id), 300);
+            } else {
+                alert(json.message);
+            }
+        }
+
+        async function dropAll(id) {
+            if(!confirm(\`Bot (\${id}) üzerindeki TÜM eşyaları yere atmak istediğinize emin misiniz?\`)) return;
+            let res = await fetch('/drop-all', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+            let json = await res.json();
+            alert(json.message);
+            setTimeout(() => loadInventory(id), 1000);
+        }
+
+        async function updateLoop1(id) {
+            let msg = document.getElementById('loopMsgInput1').value;
+            let interval = document.getElementById('loopIntervalInput1').value;
+            
+            bots[id].recurringMsg1 = msg;
+            bots[id].recurringInterval1 = interval;
+
+            let res = await fetch('/loop1', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
+            let json = await res.json();
+            alert(json.message);
+        }
+
+        async function updateLoop2(id) {
+            let msg = document.getElementById('loopMsgInput2').value;
+            let interval = document.getElementById('loopIntervalInput2').value;
+            
+            bots[id].recurringMsg2 = msg;
+            bots[id].recurringInterval2 = interval;
+
+            let res = await fetch('/loop2', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg, interval: interval})});
+            let json = await res.json();
+            alert(json.message);
+        }
+
+        async function stopBot(id) {
+            if(mapInterval) clearInterval(mapInterval);
+            let res = await fetch('/stop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
+            let json = await res.json();
+            alert(json.message);
+            delete bots[id];
+            delete chatHistories[id];
+            updateBotList();
+            showAddBotForm();
+        }
+
+        async function sendChat(id) {
+            let msg = document.getElementById('manualMsg').value;
+            if(!msg) return;
+            let res = await fetch('/chat', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, message: msg})});
+            let json = await res.json();
+            if(json.status === "success") {
+                document.getElementById('manualMsg').value = '';
+            } else {
+                alert(json.message);
+            }
+        }
+
+        async function init() {
+            let res = await fetch('/bots');
+            let activeBots = await res.json();
+            bots = activeBots;
+            updateBotList();
+            let keys = Object.keys(bots);
+            if(keys.length > 0) {
+                selectBot(keys[0]);
+            } else {
+                showAddBotForm();
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
+`;
+
+app.get('/', (req, res) => {
+    res.send(htmlPage);
+});
+
+io.on('connection', (socket) => {
+    socket.on('joinBotRoom', (botId) => {
+        socket.join(botId);
+    });
+});
+
+app.get('/bots', (req, res) => {
+    res.json(manager.getActiveBots());
+});
+
+app.get('/inventory/:id', (req, res) => {
+    const items = manager.getInventory(req.params.id);
+    if (items) {
+        res.json({ status: "success", items });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil!" });
+    }
+});
+
+app.get('/position/:id', (req, res) => {
+    const pos = manager.getPosition ? manager.getPosition(req.params.id) : null;
+    if (pos) {
+        res.json({ status: "success", position: pos });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil veya konum alınamadı!" });
+    }
+});
+
+app.post('/start', (req, res) => {
+    const { id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2 } = req.body;
+    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2);
+    res.json(result);
+});
+
+app.post('/control', (req, res) => {
+    const { id, control, status } = req.body;
+    const result = manager.setControlState(id, control, status);
+    res.json(result);
+});
+
+app.post('/jump', (req, res) => {
+    const { id } = req.body;
+    const result = manager.jump(id);
+    res.json(result);
+});
+
+app.post('/clear-controls', (req, res) => {
+    const { id } = req.body;
+    const result = manager.clearControls(id);
+    res.json(result);
+});
+
+app.post('/loop1', (req, res) => {
+    const { id, message, interval } = req.body;
+    const success = manager.setLoop1(id, message, parseInt(interval));
+    if (success) {
+        res.json({ status: "success", message: "Tekrarlayan mesaj 1 güncellendi!" });
+    } else {
+        res.json({ status: "error", message: "Bot bulunamadı!" });
+    }
+});
+
+app.post('/loop2', (req, res) => {
+    const { id, message, interval } = req.body;
+    const success = manager.setLoop2(id, message, parseInt(interval));
+    if (success) {
+        res.json({ status: "success", message: "Tekrarlayan mesaj 2 güncellendi!" });
+    } else {
+        res.json({ status: "error", message: "Bot bulunamadı!" });
+    }
+});
+
+app.post('/stop', (req, res) => {
+    const { id } = req.body;
+    const result = manager.stopBot(id);
+    res.json(result);
+});
+
+app.post('/chat', (req, res) => {
+    const { id, message } = req.body;
+    const success = manager.sendMessage(id, message);
+    if (success) {
+        res.json({ status: "success" });
+    } else {
+        res.json({ status: "error", message: "Bot aktif değil!" });
+    }
+});
+
+app.post('/drop', (req, res) => {
+    const { id, slot } = req.body;
+    const result = manager.dropItem(id, parseInt(slot));
+    res.json(result);
+});
+
+app.post('/drop-all', (req, res) => {
+    const { id } = req.body;
+    const result = manager.dropAllItems(id);
+    res.json(result);
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    console.log(`Panel çalışıyor: http://localhost:${PORT}`);
 });
