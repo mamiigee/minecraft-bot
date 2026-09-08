@@ -454,6 +454,127 @@ class AFKBotManager {
         return { status: "success", message: "Tüm envanteri atma işlemi başlatıldı." };
     }
 
+    // YENİ EKLENEN: FM'den eşya çekip, çalışma masasında blok yapma ve döngü yönetimi
+    async startFmCraftLoop(id, targetItemName, blockName, totalCount) {
+        const botInstance = this.bots.get(id);
+        if (!botInstance || !botInstance.bot) {
+            return { status: "error", message: "Bot aktif değil!" };
+        }
+        const bot = botInstance.bot;
+
+        // Belirtilen miktar kadar döngüyü arka planda çalıştır
+        (async () => {
+            for (let i = 0; i < totalCount; i++) {
+                if (!botInstance.bot) break;
+                console.log(`[BOT:${id}] [Döngü ${i + 1}/${totalCount}] FM işlemi başlatılıyor...`);
+
+                try {
+                    // 1. ADIM: /fm komutunu gönder ve menünün açılmasını bekle
+                    bot.chat('/fm');
+                    const window = await new Promise((resolve) => {
+                        bot.once('windowOpen', resolve);
+                        setTimeout(() => resolve(null), 4000);
+                    });
+
+                    if (!window) {
+                        console.log(`[BOT:${id}] FM menüsü açılamadı, döngü tekrarlanıyor.`);
+                        continue;
+                    }
+
+                    let foundSlot = -1;
+                    let nextButtonSlot = -1;
+
+                    // 1. Sayfa taraması
+                    for (let s = 0; s < window.inventoryStart; s++) {
+                        let item = window.slots[s];
+                        if (item) {
+                            const name = (item.name || '').toLowerCase();
+                            const displayName = (item.displayName || '').toLowerCase();
+                            if (name.includes(targetItemName.toLowerCase()) || displayName.includes(targetItemName.toLowerCase())) {
+                                foundSlot = s;
+                            }
+                            if (name.includes('arrow') || name.includes('paper') || name.includes('map') || displayName.includes('sonraki') || displayName.includes('ileri')) {
+                                nextButtonSlot = s;
+                            }
+                        }
+                    }
+
+                    // Eğer 1. sayfada bulunamadıysa ve sonraki sayfa butonu varsa 2. sayfaya geç
+                    if (foundSlot === -1 && nextButtonSlot !== -1) {
+                        console.log(`[BOT:${id}] Eşya 1. sayfada bulunamadı, 2. sayfaya geçiliyor...`);
+                        await bot.clickWindow(nextButtonSlot, 0, 0);
+                        await new Promise(r => setTimeout(r, 1000));
+
+                        for (let s = 0; s < window.inventoryStart; s++) {
+                            let item = window.slots[s];
+                            if (item) {
+                                const name = (item.name || '').toLowerCase();
+                                const displayName = (item.displayName || '').toLowerCase();
+                                if (name.includes(targetItemName.toLowerCase()) || displayName.includes(targetItemName.toLowerCase())) {
+                                    foundSlot = s;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (foundSlot !== -1) {
+                        await bot.clickWindow(foundSlot, 0, 0);
+                        console.log(`[BOT:${id}] ${targetItemName} tıklandı ve alındı.`);
+                        try { bot.closeWindow(window); } catch (e) {}
+                    } else {
+                        try { bot.closeWindow(window); } catch (e) {}
+                        console.log(`[BOT:${id}] Eşya hiçbir sayfada bulunamadı!`);
+                        await new Promise(r => setTimeout(r, 2000));
+                        continue;
+                    }
+
+                    await new Promise(r => setTimeout(r, 1000));
+
+                    // 2. ADIM: Yakındaki crafting table'ı tarayıp bulma
+                    const craftingTableBlock = bot.findBlock({
+                        matching: block => block.name === 'crafting_table',
+                        maxDistance: 6
+                    });
+
+                    if (!craftingTableBlock) {
+                        console.log(`[BOT:${id}] Yakınlarda çalışma masası bulunamadı!`);
+                        continue;
+                    }
+
+                    // 3. ADIM: Çalışma masasına sağ tıklayıp açma ve craft etme
+                    const craftingTable = await bot.openCraftingTable(craftingTableBlock);
+                    const materialName = targetItemName.toLowerCase();
+                    const itemType = bot.registry.itemsByName[materialName] || Object.values(bot.registry.itemsByName).find(i => i.name.includes(materialName));
+                    
+                    if (itemType) {
+                        const recipes = bot.recipesFor(itemType.id, null, 1, true, craftingTable);
+                        if (recipes.length > 0) {
+                            try {
+                                await bot.craft(craftingTable, recipes[0], 1);
+                                console.log(`[BOT:${id}] Eşya blok haline getirildi.`);
+                            } catch (craftErr) {
+                                console.log(`[BOT:${id}] Craft hatası: ${craftErr.message}`);
+                            }
+                        }
+                    }
+                    
+                    try { craftingTable.close(); } catch(e) {}
+                    await new Promise(r => setTimeout(r, 1000));
+
+                } catch (loopErr) {
+                    console.log(`[BOT:${id}] Döngü sırasında hata: ${loopErr.message}`);
+                }
+
+                // Döngüler arası bekleme
+                await new Promise(r => setTimeout(r, 2000));
+            }
+            console.log(`[BOT:${id}] Belirlenen miktar (${totalCount}) kadar FM ve craft döngüsü tamamlandı.`);
+        })();
+
+        return { status: "success", message: `Bot (${id}) için ${totalCount} adetlik döngü başlatıldı.` };
+    }
+
     stopBot(id) {
         const botInstance = this.bots.get(id);
         if (!botInstance) return { status: "error", message: "Bot bulunamadı!" };
