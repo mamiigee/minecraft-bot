@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const AFKBotManager = require('./bot');
+const minecraftData = require('minecraft-data');
 
 const app = express();
 const server = http.createServer(app);
@@ -195,6 +196,16 @@ app.get('/', (req, res) => {
                                     <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
                                 </div>
                             </div>
+
+                            <div class="card">
+                                <h3>Otomatik Eşya Üretimi (Auto Craft)</h3>
+                                <label>Eşya Adı (İngilizce, örn: stick, planks)</label>
+                                <input type="text" id="craftItemName" placeholder="stick">
+                                <label>Adet</label>
+                                <input type="number" id="craftItemCount" value="1" min="1">
+                                <button class="loop-btn" onclick="startAutoCraft('\${id}')">Eşya Üret (Craft)</button>
+                            </div>
+
                             <div class="card">
                                 <h3>Anlık Mesaj Gönder</h3>
                                 <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
@@ -427,6 +438,22 @@ app.get('/', (req, res) => {
                     setTimeout(() => loadInventory(id), 1000);
                 }
 
+                async function startAutoCraft(id) {
+                    let itemName = document.getElementById('craftItemName').value.trim();
+                    let count = document.getElementById('craftItemCount').value;
+                    if(!itemName) { alert("Eşya adı boş olamaz!"); return; }
+                    let res = await fetch('/craft', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id, itemName, count: parseInt(count) })
+                    });
+                    let json = await res.json();
+                    alert(json.message);
+                    if(json.status === "success") {
+                        setTimeout(() => loadInventory(id), 500);
+                    }
+                }
+
                 async function updateLoop1(id) {
                     let msg = document.getElementById('loopMsgInput1').value;
                     let interval = document.getElementById('loopIntervalInput1').value;
@@ -592,6 +619,16 @@ app.post('/drop-all', (req, res) => {
     const { id } = req.body;
     const result = manager.dropAllItems(id);
     res.json(result);
+});
+
+app.post('/craft', async (req, res) => {
+    const { id, itemName, count } = req.body;
+    if (manager.craftItem) {
+        const result = await manager.craftItem(id, itemName, parseInt(count) || 1);
+        res.json(result);
+    } else {
+        res.json({ status: "error", message: "Bot yöneticisinde (bot.js) craftItem fonksiyonu tanımlı değil!" });
+    }
 });
 
 const PORT = process.env.PORT || 8080;
