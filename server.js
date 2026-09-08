@@ -194,6 +194,14 @@ const htmlPage = `
                             <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
                         </div>
                     </div>
+
+                    <div class="card">
+                        <h3>Altın / Craft Döngüsü (Gold Loop)</h3>
+                        <label>Döngü Sayısı</label>
+                        <input type="number" id="goldLoopCount" value="10">
+                        <button class="loop-btn" onclick="startGoldLoop('\${id}')" style="background: #9c27b0;">Altın/Craft Döngüsünü Başlat</button>
+                    </div>
+
                     <div class="card">
                         <h3>Anlık Mesaj Gönder</h3>
                         <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
@@ -426,6 +434,17 @@ const htmlPage = `
             setTimeout(() => loadInventory(id), 1000);
         }
 
+        async function startGoldLoop(id) {
+            let loopCount = document.getElementById('goldLoopCount').value;
+            let res = await fetch('/gold-loop', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id, loopCount: parseInt(loopCount) })
+            });
+            let json = await res.json();
+            alert(json.message || "Altın/Craft döngüsü tetiklendi.");
+        }
+
         async function updateLoop1(id) {
             let msg = document.getElementById('loopMsgInput1').value;
             let interval = document.getElementById('loopIntervalInput1').value;
@@ -545,6 +564,12 @@ app.post('/jump', (req, res) => {
 app.post('/clear-controls', (req, res) => {
     const { id } = req.body;
     const result = manager.clearControls(id);
+    res.json(result);
+});
+
+app.post('/gold-loop', async (req, res) => {
+    const { id, loopCount } = req.body;
+    const result = await manager.runGoldFarmLoop(id, loopCount);
     res.json(result);
 });
 
