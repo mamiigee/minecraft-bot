@@ -1,4 +1,6 @@
 const express = require('express');
+const zlib = require('zlib');
+const originalWarn = console.warn;
 const http = require('http');
 const { Server } = require('socket.io');
 const AFKBotManager = require('./bot');
@@ -9,6 +11,34 @@ const io = new Server(server);
 const manager = new AFKBotManager();
 
 app.use(express.json());
+
+// UptimeRobot icin sifresiz, cok hafif adres
+app.get('/health', (req, res) => res.send('ok'));
+
+// Panel sifresi: Render > Environment kismina PANEL_PASSWORD (ve istersen PANEL_USER) ekle
+const PANEL_USER = process.env.PANEL_USER || 'admin';
+const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
+if (!PANEL_PASSWORD) originalWarn('UYARI: PANEL_PASSWORD tanimli degil, panel sifresiz aciliyor!');
+
+function isAuthorized(header) {
+    if (!PANEL_PASSWORD) return true;
+    if (!header || !header.startsWith('Basic ')) return false;
+    const decoded = Buffer.from(header.slice(6), 'base64').toString();
+    const i = decoded.indexOf(':');
+    if (i < 0) return false;
+    return decoded.slice(0, i) === PANEL_USER && decoded.slice(i + 1) === PANEL_PASSWORD;
+}
+
+app.use((req, res, next) => {
+    if (isAuthorized(req.headers.authorization)) return next();
+    res.set('WWW-Authenticate', 'Basic realm="Bot Paneli"');
+    res.status(401).send('Giris gerekli');
+});
+
+io.use((socket, next) => {
+    if (isAuthorized(socket.request.headers.authorization)) return next();
+    next(new Error('unauthorized'));
+});
 
 // Log yakalayıcı optimize edildi (Regex ile güvenli temizleme)
 const originalLog = console.log;
@@ -74,6 +104,8 @@ const htmlPage = `
         let chatHistories = {};
         let currentActiveBot = null;
         let mapInterval = null;
+        const BLOCK_COLORS = ['#444444', '#3b82f6', '#22c55e', '#eab308', '#71717a', '#78350f', '#a16207'];
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && currentActiveBot) updateMap(currentActiveBot); });
 
         // Socket dinleyicisi tek bir kez tanımlandı (Mükerrer tetiklenme engellendi)
         socket.on('chatMessage', function(data) {
@@ -83,10 +115,12 @@ const htmlPage = `
             }
             chatHistories[botId] += text + "\\n";
             
+            if (chatHistories[botId].length > 30000) chatHistories[botId] = chatHistories[botId].slice(-20000);
+
             if (currentActiveBot === botId) {
                 const chatBox = document.getElementById('chatBox');
                 if(chatBox) {
-                    chatBox.innerHTML = chatHistories[botId];
+                    chatBox.textContent = chatHistories[botId];
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             }
@@ -242,7 +276,7 @@ const htmlPage = `
 
             const chatBox = document.getElementById('chatBox');
             if (chatHistories[id]) {
-                chatBox.innerHTML = chatHistories[id];
+                chatBox.textContent = chatHistories[id];
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
@@ -253,12 +287,16 @@ const htmlPage = `
 
         function startMapPolling(id) {
             updateMap(id);
-            mapInterval = setInterval(() => updateMap(id), 1000);
+            mapInterval = setInterval(() => updateMap(id), 5000);
         }
 
         async function updateMap(id) {
-            let res = await fetch('/position/' + id);
-            let json = await res.json();
+            if (document.hidden) return;
+            let json;
+            try {
+                let res = await fetch('/position/' + id);
+                json = await res.json();
+            } catch (e) { return; }
             const canvas = document.getElementById('botMap');
             const coordText = document.getElementById('coordText');
             if(!canvas || !coordText) return;
@@ -287,26 +325,26 @@ const htmlPage = `
                 }
 
                 if (blocks && blocks.length > 0) {
+                    const S = 7;
+                    const fx = x - Math.floor(x);
+                    const fz = z - Math.floor(z);
                     blocks.forEach(b => {
-                        let relX = (b.x - x) * 4;
-                        let relZ = (b.z - z) * 4;
-
-                        if (Math.abs(relX) < cx + 10 && Math.abs(relZ) < cy + 10) {
-                            ctx.fillStyle = getBlockColor(b.name);
-                            ctx.fillRect(relX - 2, relZ - 2, 4, 4);
-                        }
+                        let relX = (b[0] - fx) * S;
+                        let relZ = (b[1] - fz) * S;
+                        ctx.fillStyle = BLOCK_COLORS[b[2]] || '#444444';
+                        ctx.fillRect(relX - 3.5, relZ - 3.5, S, S);
                     });
                 }
 
                 if (entities && entities.length > 0) {
                     entities.forEach(e => {
-                        let relX = (e.x - x) * 4;
-                        let relZ = (e.z - z) * 4;
+                        let relX = (e[0] - x) * 7;
+                        let relZ = (e[1] - z) * 7;
 
                         if (Math.abs(relX) < cx && Math.abs(relZ) < cy) {
                             ctx.save();
                             ctx.translate(relX, relZ);
-                            ctx.fillStyle = e.type === 'player' ? '#2196F3' : '#ff9800';
+                            ctx.fillStyle = e[2] === 1 ? '#2196F3' : '#ff9800';
                             ctx.beginPath();
                             ctx.arc(0, 0, 3, 0, Math.PI * 2);
                             ctx.fill();
@@ -516,12 +554,42 @@ app.get('/inventory/:id', (req, res) => {
     }
 });
 
+function blockColorIndex(name) {
+    if (name.includes('water')) return 1;
+    if (name.includes('grass') || name.includes('leaves')) return 2;
+    if (name.includes('sand')) return 3;
+    if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return 4;
+    if (name.includes('log') || name.includes('wood') || name.includes('planks')) return 5;
+    if (name.includes('dirt')) return 6;
+    return 0;
+}
+
 app.get('/position/:id', (req, res) => {
-    const pos = manager.getPosition ? manager.getPosition(req.params.id) : null;
-    if (pos) {
-        res.json({ status: "success", position: pos });
+    const raw = manager.getPosition ? manager.getPosition(req.params.id) : null;
+    let body;
+    if (raw) {
+        const R = 15; // radar yaricapi (blok)
+        const bx = Math.floor(raw.x);
+        const bz = Math.floor(raw.z);
+        const blocks = [];
+        for (const b of raw.blocks || []) {
+            const dx = b.x - bx;
+            const dz = b.z - bz;
+            if (Math.abs(dx) <= R && Math.abs(dz) <= R) blocks.push([dx, dz, blockColorIndex(b.name)]);
+        }
+        const entities = (raw.entities || [])
+            .filter(e => Math.abs(e.x - raw.x) <= R + 2 && Math.abs(e.z - raw.z) <= R + 2)
+            .map(e => [Math.round(e.x * 10) / 10, Math.round(e.z * 10) / 10, e.type === 'player' ? 1 : 0]);
+        body = { status: "success", position: { x: raw.x, y: raw.y, z: raw.z, yaw: raw.yaw, entities, blocks } };
     } else {
-        res.json({ status: "error", message: "Bot aktif değil veya konum alınamadı!" });
+        body = { status: "error", message: "Bot aktif değil veya konum alınamadı!" };
+    }
+    const payload = Buffer.from(JSON.stringify(body));
+    if ((req.headers['accept-encoding'] || '').includes('gzip')) {
+        res.set({ 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' });
+        res.send(zlib.gzipSync(payload));
+    } else {
+        res.type('json').send(payload);
     }
 });
 
