@@ -90,6 +90,19 @@ class AFKBotManager {
                 viewDistance: 'tiny'
             });
 
+            // --- Ag olcumu: her 10 dakikada bir logda ne kadar veri gidip geldigini gosterir ---
+            if (botInstance.netTimer) clearInterval(botInstance.netTimer);
+            const netBot = botInstance.bot;
+            let netPackets = 0, lastPackets = 0, lastR = 0, lastW = 0;
+            if (netBot._client) netBot._client.on('packet', () => { netPackets++; });
+            botInstance.netTimer = setInterval(() => {
+                const sock = netBot._client && netBot._client.socket;
+                if (!sock) return;
+                const r = sock.bytesRead, w = sock.bytesWritten;
+                console.log(`[NET:${id}] son 10 dk -> gonderilen: ${((w - lastW) / 1024).toFixed(0)} KB, alinan: ${((r - lastR) / 1024).toFixed(0)} KB, gelen paket: ${netPackets - lastPackets}`);
+                lastR = r; lastW = w; lastPackets = netPackets;
+            }, 600000);
+            
             botInstance.bot.on('spawn', () => {
                 console.log(`[BOT:${id}] Oyuna başarıyla bağlandı.`);
                 if (botInstance.startupCommands) {
@@ -215,6 +228,7 @@ class AFKBotManager {
             clearInterval(botInstance.loopTimer2);
             botInstance.loopTimer2 = null;
         }
+        if (botInstance.netTimer) { clearInterval(botInstance.netTimer); botInstance.netTimer = null; }
         if (botInstance.bot) {
             try {
                 botInstance.bot.quit();
@@ -462,6 +476,7 @@ class AFKBotManager {
         if (botInstance.reconnectTimeout) clearTimeout(botInstance.reconnectTimeout);
         if (botInstance.loopTimer1) clearInterval(botInstance.loopTimer1);
         if (botInstance.loopTimer2) clearInterval(botInstance.loopTimer2);
+        if (botInstance.netTimer) clearInterval(botInstance.netTimer);
         if (botInstance.bot) {
             try {
                 botInstance.bot.quit();
