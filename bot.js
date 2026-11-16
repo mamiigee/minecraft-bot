@@ -86,7 +86,8 @@ class AFKBotManager {
                 host: botInstance.host,
                 port: botInstance.port,
                 username: botInstance.username,
-                version: botInstance.version
+                version: botInstance.version,
+                viewDistance: 'tiny'
             });
 
             botInstance.bot.on('spawn', () => {
@@ -347,7 +348,7 @@ class AFKBotManager {
                 }
             }
 
-            const radius = 27;
+            const radius = 15;
             const bx = Math.floor(botPos.x);
             const bz = Math.floor(botPos.z);
             const by = Math.floor(botPos.y);
