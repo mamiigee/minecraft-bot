@@ -1,6 +1,4 @@
 const express = require('express');
-const zlib = require('zlib');
-const originalWarn = console.warn;
 const http = require('http');
 const { Server } = require('socket.io');
 const AFKBotManager = require('./bot');
@@ -12,59 +10,7 @@ const manager = new AFKBotManager();
 
 app.use(express.json());
 
-// UptimeRobot icin sifresiz, cok hafif adres
-app.get('/health', (req, res) => res.send('ok'));
-
-// PWA dosyalari: sifre istemez (icinde gizli bir sey yok)
-const ICON_192 = Buffer.from('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', 'base64');
-const ICON_512 = Buffer.from('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', 'base64');
-app.get('/manifest.json', (req, res) => {
-    res.type('application/manifest+json').send(JSON.stringify({
-        name: 'BotPanel',
-        short_name: 'BotPanel',
-        start_url: '/',
-        scope: '/',
-        display: 'standalone',
-        background_color: '#121212',
-        theme_color: '#121212',
-        icons: [
-            { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-            { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ]
-    }));
-});
-app.get('/icon-192.png', (req, res) => { res.set('Cache-Control', 'public, max-age=86400'); res.type('png').send(ICON_192); });
-app.get('/icon-512.png', (req, res) => { res.set('Cache-Control', 'public, max-age=86400'); res.type('png').send(ICON_512); });
-app.get('/sw.js', (req, res) => {
-    res.type('application/javascript').send("self.addEventListener('install', () => self.skipWaiting());\nself.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\nself.addEventListener('fetch', () => {});\n");
-});
-
-// Panel sifresi: Render > Environment kismina PANEL_PASSWORD (ve istersen PANEL_USER) ekle
-const PANEL_USER = process.env.PANEL_USER || 'admin';
-const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
-if (!PANEL_PASSWORD) originalWarn('UYARI: PANEL_PASSWORD tanimli degil, panel sifresiz aciliyor!');
-
-function isAuthorized(header) {
-    if (!PANEL_PASSWORD) return true;
-    if (!header || !header.startsWith('Basic ')) return false;
-    const decoded = Buffer.from(header.slice(6), 'base64').toString();
-    const i = decoded.indexOf(':');
-    if (i < 0) return false;
-    return decoded.slice(0, i) === PANEL_USER && decoded.slice(i + 1) === PANEL_PASSWORD;
-}
-
-app.use((req, res, next) => {
-    if (isAuthorized(req.headers.authorization)) return next();
-    res.set('WWW-Authenticate', 'Basic realm="Bot Paneli"');
-    res.status(401).send('Giris gerekli');
-});
-
-io.use((socket, next) => {
-    if (isAuthorized(socket.request.headers.authorization)) return next();
-    next(new Error('unauthorized'));
-});
-
-// Log yakalayici optimize edildi (Regex ile güvenli temizleme)
+// Log yakalayıcı optimize edildi (Regex ile güvenli temizleme)
 const originalLog = console.log;
 console.log = function(...args) {
     originalLog.apply(console, args);
@@ -82,12 +28,7 @@ const htmlPage = `
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#121212">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/icon-192.png">
-    <link rel="apple-touch-icon" href="/icon-192.png">
-    <title>BotPanel</title>
+    <title>Dinamik Çoklu Minecraft Paneli</title>
     <style>
         body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; height: 95vh; box-sizing: border-box; }
         .sidebar { width: 260px; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #333; overflow-y: auto; }
@@ -95,7 +36,7 @@ const htmlPage = `
         .bot-form-panel { flex: 1; overflow-y: auto; padding-right: 10px; }
         .chat-panel { flex: 1; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; }
         .card { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; }
-        input, button, select { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
+        input, button { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
         button { background: #4CAF50; cursor: pointer; font-weight: bold; }
         button.stop { background: #f44336; }
         button.chat-btn { background: #2196F3; }
@@ -110,20 +51,6 @@ const htmlPage = `
         label { font-size: 12px; color: #aaa; display: block; margin-top: 5px; }
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; text-align: center; width: 100%; }
         .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px; margin: 10px auto; }
-        .control-btn { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; }
-        @media (max-width: 800px) {
-            body { flex-direction: column; height: auto; min-height: 100vh; padding: 10px; gap: 10px; }
-            .sidebar { width: auto; padding: 10px; overflow-y: visible; }
-            #botList { display: flex; flex-wrap: wrap; gap: 6px; }
-            .bot-tab { flex: 1 1 140px; }
-            .main-content { flex-direction: column; padding: 10px; overflow-y: visible; }
-            .bot-form-panel { padding-right: 0; overflow-y: visible; }
-            .chat-panel { min-height: 320px; }
-            #chatBox { min-height: 240px; font-size: 12px; }
-            button, input, select { min-height: 44px; font-size: 16px; }
-            .dpad { max-width: 100%; }
-            #inventoryGrid { max-width: 100% !important; overflow-x: auto; }
-        }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -147,9 +74,6 @@ const htmlPage = `
         let chatHistories = {};
         let currentActiveBot = null;
         let mapInterval = null;
-        const LEAVE_OPTIONS = '<option value="">Çıkmasın</option><option value="1">1 saat sonra</option><option value="6">6 saat sonra</option><option value="12">12 saat sonra</option><option value="24">1 gün sonra</option><option value="72">3 gün sonra</option><option value="168">7 gün sonra</option><option value="720">30 gün sonra</option>';
-        const BLOCK_COLORS = ['#444444', '#3b82f6', '#22c55e', '#eab308', '#71717a', '#78350f', '#a16207'];
-        document.addEventListener('visibilitychange', () => { if (!document.hidden && currentActiveBot) updateMap(currentActiveBot); });
 
         // Socket dinleyicisi tek bir kez tanımlandı (Mükerrer tetiklenme engellendi)
         socket.on('chatMessage', function(data) {
@@ -159,12 +83,10 @@ const htmlPage = `
             }
             chatHistories[botId] += text + "\\n";
             
-            if (chatHistories[botId].length > 30000) chatHistories[botId] = chatHistories[botId].slice(-20000);
-
             if (currentActiveBot === botId) {
                 const chatBox = document.getElementById('chatBox');
                 if(chatBox) {
-                    chatBox.textContent = chatHistories[botId];
+                    chatBox.innerHTML = chatHistories[botId];
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             }
@@ -198,45 +120,10 @@ const htmlPage = `
                         <input type="text" id="newLoopMsg2" placeholder="Boş bırakılabilir">
                         <label>Loop 2 Süresi (Saniye)</label>
                         <input type="text" id="newLoopInterval2" value="60">
-                        <label>Otomatik çıkış (isteğe bağlı)</label>
-                        <select id="newLeavePreset">\${LEAVE_OPTIONS}</select>
-                        <label>Ya da özel tarih ve saat (doluysa bu geçerli)</label>
-                        <input type="datetime-local" id="newLeaveCustom">
                         <button onclick="startNewBot()">Botu Başlat ve Kaydet</button>
                     </div>
                 </div>
             \`;
-        }
-
-        function computeLeaveAt(presetId, customId) {
-            const custom = document.getElementById(customId).value;
-            if (custom) { const t = new Date(custom).getTime(); return isNaN(t) ? 0 : t; }
-            const hours = parseFloat(document.getElementById(presetId).value);
-            return hours > 0 ? Date.now() + hours * 3600000 : 0;
-        }
-
-        function formatLeave(ts) {
-            if (!ts) return 'Otomatik çıkış yok';
-            const left = ts - Date.now();
-            const d = new Date(ts).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-            if (left <= 0) return 'Çıkış: ' + d + ' (süre doldu)';
-            const days = Math.floor(left / 86400000);
-            const hrs = Math.floor((left % 86400000) / 3600000);
-            const mins = Math.floor((left % 3600000) / 60000);
-            return 'Çıkış: ' + d + ' (kalan ' + (days ? days + ' g ' : '') + hrs + ' sa ' + mins + ' dk)';
-        }
-
-        async function setLeave(id, clear) {
-            const leaveAt = clear ? 0 : computeLeaveAt('leavePreset', 'leaveCustom');
-            if (!clear && !leaveAt) { alert('Bir süre ya da tarih seç.'); return; }
-            const res = await fetch('/leave-at', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, leaveAt})});
-            const json = await res.json();
-            alert(json.message);
-            if (json.status === 'success') {
-                bots[id].leaveAt = leaveAt;
-                const el = document.getElementById('leaveInfo');
-                if (el) el.innerHTML = '<b>' + formatLeave(leaveAt) + '</b>';
-            }
         }
 
         async function startNewBot() {
@@ -253,8 +140,7 @@ const htmlPage = `
                 recurringMsg1: document.getElementById('newLoopMsg1').value,
                 recurringInterval1: document.getElementById('newLoopInterval1').value,
                 recurringMsg2: document.getElementById('newLoopMsg2').value,
-                recurringInterval2: document.getElementById('newLoopInterval2').value,
-                leaveAt: computeLeaveAt('newLeavePreset', 'newLeaveCustom')
+                recurringInterval2: document.getElementById('newLoopInterval2').value
             };
 
             let res = await fetch('/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
@@ -272,7 +158,7 @@ const htmlPage = `
             let listHtml = '';
             for(let id in bots) {
                 let activeClass = (currentActiveBot === id) ? 'active' : '';
-                listHtml += \`<div class="bot-tab \${activeClass}" onclick="selectBot('\${id}')">\${bots[id].online === true ? '🟢' : (bots[id].online === false ? '🔴' : '⚪')} \${id} (\${bots[id].username})</div>\`;
+                listHtml += \`<div class="bot-tab \${activeClass}" onclick="selectBot('\${id}')">\${id} (\${bots[id].username})</div>\`;
             }
             document.getElementById('botList').innerHTML = listHtml;
         }
@@ -288,42 +174,34 @@ const htmlPage = `
                     <div class="card">
                         <p><b>Kullanıcı:</b> \${bots[id].username}</p>
                         <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
-                        <p id="leaveInfo"><b>\${formatLeave(bots[id].leaveAt)}</b></p>
-                        <button class="stop" onclick="stopBot('\${id}')">Botu Şimdi Durdur / Oyundan Çıkar</button>
-                        <label>Otomatik çıkış zamanı</label>
-                        <select id="leavePreset">\${LEAVE_OPTIONS}</select>
-                        <input type="datetime-local" id="leaveCustom">
-                        <button class="loop-btn" onclick="setLeave('\${id}')">Çıkış Zamanını Kaydet</button>
-                        <button onclick="setLeave('\${id}', true)" style="background:#607D8B">Otomatik Çıkışı Kaldır</button>
+                        <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
                     </div>
-                    <div class="card">
-                        <h3>Anlık Mesaj Gönder</h3>
-                        <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
-                        <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
-                    </div>
-                    <div class="card">
-                        <h3>Bot Hareket Kontrolleri</h3>
-                        <div class="dpad">
-                            <div></div>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'forward', true)" onpointerup="sendControl('\${id}', 'forward', false)" onpointerleave="sendControl('\${id}', 'forward', false)" onpointercancel="sendControl('\${id}', 'forward', false)" oncontextmenu="return false">İleri</button>
-                            <div></div>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'left', true)" onpointerup="sendControl('\${id}', 'left', false)" onpointerleave="sendControl('\${id}', 'left', false)" onpointercancel="sendControl('\${id}', 'left', false)" oncontextmenu="return false">Sol</button>
-                            <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'right', true)" onpointerup="sendControl('\${id}', 'right', false)" onpointerleave="sendControl('\${id}', 'right', false)" onpointercancel="sendControl('\${id}', 'right', false)" oncontextmenu="return false">Sağ</button>
-                            <div></div>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'back', true)" onpointerup="sendControl('\${id}', 'back', false)" onpointerleave="sendControl('\${id}', 'back', false)" onpointercancel="sendControl('\${id}', 'back', false)" oncontextmenu="return false">Geri</button>
-                            <div></div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'sneak', true)" onpointerup="sendControl('\${id}', 'sneak', false)" onpointerleave="sendControl('\${id}', 'sneak', false)" onpointercancel="sendControl('\${id}', 'sneak', false)" oncontextmenu="return false">Eğil (Sneak)</button>
-                            <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
-                        </div>
-                    </div>
+
                     <div class="card">
                         <h3>Canlı Harita (Radar)</h3>
                         <canvas id="botMap" width="220" height="220" style="background: #111; border: 1px solid #444; border-radius: 4px; display: block; margin: 0 auto;"></canvas>
                         <div id="coordText" style="text-align: center; font-size: 12px; color: #aaa; margin-top: 5px;">X: 0, Y: 0, Z: 0</div>
                     </div>
+
+                    <div class="card">
+                        <h3>Bot Hareket Kontrolleri</h3>
+                        <div class="dpad">
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'forward', true)" onmouseup="sendControl('\${id}', 'forward', false)" onmouseleave="sendControl('\${id}', 'forward', false)">İleri</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'left', true)" onmouseup="sendControl('\${id}', 'left', false)" onmouseleave="sendControl('\${id}', 'left', false)">Sol</button>
+                            <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'right', true)" onmouseup="sendControl('\${id}', 'right', false)" onmouseleave="sendControl('\${id}', 'right', false)">Sağ</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'back', true)" onmouseup="sendControl('\${id}', 'back', false)" onmouseleave="sendControl('\${id}', 'back', false)">Geri</button>
+                            <div></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'sneak', true)" onmouseup="sendControl('\${id}', 'sneak', false)" onmouseleave="sendControl('\${id}', 'sneak', false)">Eğil (Sneak)</button>
+                            <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
+                        </div>
+                    </div>
+
                     <div class="card">
                         <h3>Bot Envanteri (Görsel Izgara)</h3>
                         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
@@ -333,6 +211,11 @@ const htmlPage = `
                         <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #111; padding: 8px; border-radius: 6px; margin-top: 10px; max-width: fit-content;">
                             <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
                         </div>
+                    </div>
+                    <div class="card">
+                        <h3>Anlık Mesaj Gönder</h3>
+                        <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
+                        <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
                     </div>
                     <div class="card">
                         <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
@@ -359,7 +242,7 @@ const htmlPage = `
 
             const chatBox = document.getElementById('chatBox');
             if (chatHistories[id]) {
-                chatBox.textContent = chatHistories[id];
+                chatBox.innerHTML = chatHistories[id];
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
@@ -370,16 +253,12 @@ const htmlPage = `
 
         function startMapPolling(id) {
             updateMap(id);
-            mapInterval = setInterval(() => updateMap(id), 5000);
+            mapInterval = setInterval(() => updateMap(id), 1000);
         }
 
         async function updateMap(id) {
-            if (document.hidden) return;
-            let json;
-            try {
-                let res = await fetch('/position/' + id);
-                json = await res.json();
-            } catch (e) { return; }
+            let res = await fetch('/position/' + id);
+            let json = await res.json();
             const canvas = document.getElementById('botMap');
             const coordText = document.getElementById('coordText');
             if(!canvas || !coordText) return;
@@ -408,26 +287,26 @@ const htmlPage = `
                 }
 
                 if (blocks && blocks.length > 0) {
-                    const S = 7;
-                    const fx = x - Math.floor(x);
-                    const fz = z - Math.floor(z);
                     blocks.forEach(b => {
-                        let relX = (b[0] - fx) * S;
-                        let relZ = (b[1] - fz) * S;
-                        ctx.fillStyle = BLOCK_COLORS[b[2]] || '#444444';
-                        ctx.fillRect(relX - 3.5, relZ - 3.5, S, S);
+                        let relX = (b.x - x) * 4;
+                        let relZ = (b.z - z) * 4;
+
+                        if (Math.abs(relX) < cx + 10 && Math.abs(relZ) < cy + 10) {
+                            ctx.fillStyle = getBlockColor(b.name);
+                            ctx.fillRect(relX - 2, relZ - 2, 4, 4);
+                        }
                     });
                 }
 
                 if (entities && entities.length > 0) {
                     entities.forEach(e => {
-                        let relX = (e[0] - x) * 7;
-                        let relZ = (e[1] - z) * 7;
+                        let relX = (e.x - x) * 4;
+                        let relZ = (e.z - z) * 4;
 
                         if (Math.abs(relX) < cx && Math.abs(relZ) < cy) {
                             ctx.save();
                             ctx.translate(relX, relZ);
-                            ctx.fillStyle = e[2] === 1 ? '#2196F3' : '#ff9800';
+                            ctx.fillStyle = e.type === 'player' ? '#2196F3' : '#ff9800';
                             ctx.beginPath();
                             ctx.arc(0, 0, 3, 0, Math.PI * 2);
                             ctx.fill();
@@ -595,35 +474,11 @@ const htmlPage = `
             }
         }
 
-        async function refreshStatus() {
-            if (document.hidden) return;
-            try {
-                let res = await fetch('/bots');
-                let fresh = await res.json();
-                for (let id in fresh) { if (bots[id]) { bots[id].online = fresh[id].online; bots[id].leaveAt = fresh[id].leaveAt; } }
-                let removedCurrent = false;
-                for (let id in bots) {
-                    if (!fresh[id]) { if (id === currentActiveBot) removedCurrent = true; delete bots[id]; delete chatHistories[id]; }
-                }
-                updateBotList();
-                if (removedCurrent) {
-                    showAddBotForm();
-                } else if (currentActiveBot && document.getElementById('leaveInfo')) {
-                    document.getElementById('leaveInfo').innerHTML = '<b>' + formatLeave(bots[currentActiveBot].leaveAt) + '</b>';
-                }
-            } catch (e) {}
-        }
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-        }
-
         async function init() {
             let res = await fetch('/bots');
             let activeBots = await res.json();
             bots = activeBots;
             updateBotList();
-            setInterval(refreshStatus, 15000);
             let keys = Object.keys(bots);
             if(keys.length > 0) {
                 selectBot(keys[0]);
@@ -649,13 +504,7 @@ io.on('connection', (socket) => {
 });
 
 app.get('/bots', (req, res) => {
-    const list = manager.getActiveBots();
-    for (const id in list) {
-        const inst = manager.bots.get(id);
-        list[id].online = !!(inst && inst.bot && inst.bot.entity);
-        delete list[id].startupCommands;
-    }
-    res.json(list);
+    res.json(manager.getActiveBots());
 });
 
 app.get('/inventory/:id', (req, res) => {
@@ -667,61 +516,19 @@ app.get('/inventory/:id', (req, res) => {
     }
 });
 
-function blockColorIndex(name) {
-    if (name.includes('water')) return 1;
-    if (name.includes('grass') || name.includes('leaves')) return 2;
-    if (name.includes('sand')) return 3;
-    if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return 4;
-    if (name.includes('log') || name.includes('wood') || name.includes('planks')) return 5;
-    if (name.includes('dirt')) return 6;
-    return 0;
-}
-
 app.get('/position/:id', (req, res) => {
-    const raw = manager.getPosition ? manager.getPosition(req.params.id) : null;
-    let body;
-    if (raw) {
-        const R = 15; // radar yaricapi (blok)
-        const bx = Math.floor(raw.x);
-        const bz = Math.floor(raw.z);
-        const blocks = [];
-        for (const b of raw.blocks || []) {
-            const dx = b.x - bx;
-            const dz = b.z - bz;
-            if (Math.abs(dx) <= R && Math.abs(dz) <= R) blocks.push([dx, dz, blockColorIndex(b.name)]);
-        }
-        const entities = (raw.entities || [])
-            .filter(e => Math.abs(e.x - raw.x) <= R + 2 && Math.abs(e.z - raw.z) <= R + 2)
-            .map(e => [Math.round(e.x * 10) / 10, Math.round(e.z * 10) / 10, e.type === 'player' ? 1 : 0]);
-        body = { status: "success", position: { x: raw.x, y: raw.y, z: raw.z, yaw: raw.yaw, entities, blocks } };
+    const pos = manager.getPosition ? manager.getPosition(req.params.id) : null;
+    if (pos) {
+        res.json({ status: "success", position: pos });
     } else {
-        body = { status: "error", message: "Bot aktif değil veya konum alınamadı!" };
-    }
-    const payload = Buffer.from(JSON.stringify(body));
-    if ((req.headers['accept-encoding'] || '').includes('gzip')) {
-        res.set({ 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' });
-        res.send(zlib.gzipSync(payload));
-    } else {
-        res.type('json').send(payload);
+        res.json({ status: "error", message: "Bot aktif değil veya konum alınamadı!" });
     }
 });
 
 app.post('/start', (req, res) => {
     const { id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2 } = req.body;
-    const leaveAt = Number(req.body.leaveAt) || 0;
-    if (leaveAt && leaveAt <= Date.now()) {
-        return res.json({ status: "error", message: "Çıkış zamanı geçmişte olamaz!" });
-    }
-    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true, leaveAt);
+    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true);
     res.json(result);
-});
-
-app.post('/leave-at', (req, res) => {
-    const leaveAt = Number(req.body.leaveAt) || 0;
-    if (leaveAt && leaveAt <= Date.now()) {
-        return res.json({ status: "error", message: "Çıkış zamanı geçmişte olamaz!" });
-    }
-    res.json(manager.setLeaveAt(req.body.id, leaveAt));
 });
 
 app.post('/control', (req, res) => {
@@ -794,8 +601,6 @@ const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
     console.log(`Panel çalışıyor: http://localhost:${PORT}`);
 });const express = require('express');
-const zlib = require('zlib');
-const originalWarn = console.warn;
 const http = require('http');
 const { Server } = require('socket.io');
 const AFKBotManager = require('./bot');
@@ -807,59 +612,7 @@ const manager = new AFKBotManager();
 
 app.use(express.json());
 
-// UptimeRobot icin sifresiz, cok hafif adres
-app.get('/health', (req, res) => res.send('ok'));
-
-// PWA dosyalari: sifre istemez (icinde gizli bir sey yok)
-const ICON_192 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAFpklEQVR42u2dy00sMRBFmxYRsEd6cbAgAcIgLsIgARbEgUQib4GERsN8PHbZvrd8rt7mSUy3u+r0rWr3x3cPDw8bQrXaCQECIARACIAQACEEQAiAEAAhAEIIgBAAIQBCAIQQACEAQgCEAAghAEIAhAAIARACIIQACAEQAiAEQAgBEAIgBEAIgBACIARACIAQACEEQAiAEAAhd90Tgh89vvy76e+/378I2rZtd8t+5vdWYuAJgIKhAaZVACrkpjzx4RsEID90YrM7bEcAlIobSMoG0Ln8jU+ezkgAqD5nCtnSHBUAmSUpK0b2AHklJh9G3gAd5cMlGabDzgbQYRocc+A+fmOA0pzBCQ5kJ+gTdTT4MXdalnagHLaf6bh2oqxmRV4+tEMPDOUHKD09vgzt0ANDmZvowfSU5GzwMMTPGWmABsSx/SwfMDBlhnQB6hrBHtWh6yBlGRIFqF/sLqNTsq/2LWRiSB2gwKj1eMJrwFNjPUKRHKDwkJ1M8wBjCx+/IEO7LD2dNvj9/vXzr/DnT2/PhQ3Q3832PhYcqG/JD7nt+vT2/Pn6MWXXFs2Q6ESiDj3lJnRhd7KTBakACqz0R+frlOgf7TeQIalClvDrHFFuf2g8FSb0dwCOj/vYABRlP4K9QiBDgia0q3lGFIWN9FRbztVyFn6wABTTKvaeLGlHKoQhtW56PkAhZ5L4dG2nGqRgQrtgcKfH8ZzZxNa16mEzD6R4zeXYUwNQZOmJoifWZjoNVedyzNuBxrc+UXhpzgqaAdQYuzTzctZxkHCgRv8ItJ8Sgwk3IetWenc/a3O82uzrpvt0AnQ0oH3OF8xd5yw0sp9A1FpMSMF9WSvD3n4AyLL29QDOsRPa50LQYsJpXnMOCcIs+Chh1K+VAJIyeaqYsQMNnjw0OhwAovYB0NplaKn6PtOBWDUyQRgtP7IpRd7iD3gs3QPRwQAQIAIQWQcgtCyOAIQACMMAIKAEIDKNAyHQBCByDEAIgDrI4m5RtcOZvulm/Goz9UvhdJoAUPqnOGZhOiWwC/VAtM8ApOLbHI4rQNUuPdh+Qr4rDUCIEiZ8QS5u++UmFBKEWdZ1b4f89/vXrRGvLii/6/SMqYCO16d+AI3R0RJPP//lOu6vpq0X1vh53nLrvinrJUuDxW6wpQYpfOJ4mgNVVKKRlnP1L6XcaGLts383vp3Cz9ePijUJC391mbMEX3qU6IEeX/41LrNy7ueX81fBTWCXneMrx8avNrf8vM51Om3Q+nu/3hOJlwvZSVcIR+fqxk8OI8dniueXsN9WurGKXd1CP2gquuz26qPDn/2tjHOL3/zmr6vlFLrRIUx2ywvZABS+ftYsdArHoLM+WoumTSSGG7JFV5HvSHfN+IY31PnooYTFX4geMiQV6MPxhB8sAEX6h+CCkoFds2CZTvhAmRRDya65RJvoHmfYETrjkxc+AM2rBFEHaneOoygPtqJ+9OBAoz1/sBX12J1yHZQDqIdXnzx9YzPRdRfKU1yKAHUK2bkq0GNWpsewNXtwdYDGWMVN+2rfQqaLOFGAeseuR0/adZCyUwC6AI2JYPjl3lL0qAM0Po4lPA0ehvj0ozpA2wKTudbHa3ArQ/D2FvQ4AbQOQ45ea3MzNT1DppXa8iObW+oPTHn1eQZN9OULJfe22v1w/J4HmnubHXrsHSjN5X2O6QljgHzP4ExV2BugkyXM4rWeND2cPUAuicmHTiqAlJOUFZ2EAG1DnvCyGwkAhSVvG/5MdGJ0MgM0Pp2rcbMKQFezW5fp8A0CUCqSGrUCN4sC1A+mpaABoACeliUGgFCkWO4JARACIARACIAQAiAEQAiAEAAhBEAIgBAAIQBCCIAQACEAQgCEEAAhAEIAhAAIARBCAIQACAEQAiCEAAgBEAIgBEAIARACIARACIAQAiAEQAiAkL3+A/n5SmbIz/heAAAAAElFTkSuQmCC', 'base64');
-const ICON_512 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAD7GkOtAAAPGklEQVR42u3dy61cx5IF0EuCFtRcgOzQQA7IDNolM+gAB7SDAB3RgAAh8HdPnV9GxF4Lb9Jo9OuqPJl7Z5wSxTePx+MFgDxvLQGAAgBAAQCgAABQAAAoAAAUAAAKAAAFAIACAEABAKAAAFAAACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCgAABQAAAoAAAUAAAKAAAFAIACAEABAKAAAFAAACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCgAABQAAAoAAAUAAAKAAAFAIACAEABAKAAAFAAACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCAAgBAAQAoAAAUAAAKAAAFAIACAEABAKAAAFAAACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCAAgBAAQCgAAAUAAAKAAAFAIACAEABAKAAAFAAAPTzzhIw1R///HnKf8+XD58tJiO9eTweVgEprxtQACDrtQIKACS+PkABgNBXBigAEPrKAAUAcl8ToABA7msCFADIfU2AAgC5rwlQAMj9vuk56buAAmBO9K9NxqgviwKAlVFYPwGtAwoA0S/pLA4KANEv1ywXCgBZJsisHgoA4SW2rCcKgLyoklOWFwVAVjYJJquNAiArjCSRxUcBIH3wIFAATA8dieOJoADIChop4wGhAJAseFgoAKYHijTx1FAACBE8QRQA07NDcHiUKADkBR4rCoDpMSEjPF+GeWsJpIN0GGbfw/K3N5sAEP2i3xP3xBUA8VkgCDx6ZvMKSASIgOF2PEqvg0wAiH5sBpvBBIADj1EAEwBT01/02xv2hgkAJxyjgDnABIDox26xW0wAOM8YBYwCCgDpjw5gAq+AEtNf9GMLYQJwdGHPxjAHKACkPzqAxrwCSkl/0Y99hQnAKYXTNow5QAEg/dEBKACkPzoABYD0RwegAJD+6AAUANIfHYACQPqjA1jInwOQ/pbOYtqHCgCnLjjrtYLdqABw3iS+PrAnU7yzBDOEnLSC75e/+0gJD+LLh89e9JsAqJJ340OnY9x4KIYABYADlpX7HpAOUAA4Wum572HpAAWgQyX6PTUdUJQfgeWI3F/zZcc8Qb8JmwC4NQ3HZIfgiHqUhgAFgFN0a/QfWa4WH9LuRQEEXYe7H6HrUvWelen++W1gFIAL1JDoX7sg876RPawAcHJKB2XNdUj4jnayAsCZWRCLvb5+5rfWAe34+wCm3RyHfbUvHz5//c9Fn/Cvf/++4r/2rI9tb3Apfw6gh3bXpVOif8yDO7IaX/9ve62GPxnQhVdAhuVa6X/nl/12/f/0/qOVsbcVAE5IUMDdXwBpNaADivMbAOtz7dK3/K+m/8tlvwRc8X29WkEBuP4PSf8l0V/E7u/eqAO2fEGVtpBXQNJ/WfSv/djf3fpvfgs0Yw0z7zomANifXBVu/T++87n5LdApa+LujAJw/W+W/jbAiYvTogO8CFIATEvJZ09sndf9v7rsrx0Cdq/SmA7gfv4gWINb84Do99x3rNj2de74h8V++i1sFRNAevoXPwPSv+ytufjdwosgBYD0X+z373kqvAUK7wAUQO71f8znT/4H/E8PzadWMmqboQBc/yumf81vseWCX20I2LGklTPUtUABuP4Pv/t73DrAEKAAmHAz2n4avfa5YZNsX+GyMWqTKADX/4HpX/wpbH+3U/Mt0I6l7tsBhgAFgPRnbAegAMRo3fQclv7PXuqLDwEDOsAQoABw98ccgAJw/R8dQHgEhgAFwJzrf6Po2fc+p/5boKcehDBFAbj+x6W/OaByBxgCFADSv9z1v9cQYA5AAbj+S39zQL8OMAQoAEZFDB4QCsD1f9T1v2O4HH+H0+gt0PbHZAhAATA8/c0BIhUFYE4PDYJ2l/fkR++GoQCcK42lSDwyI4sCoMyhcjUbXNtSVQFwa6TWydPZ6X/utb3p26ReHeCnYAUAgAJIncpd/2Mv7IYA7xsVQGNdRlSv/qNKZdKPAd4CKQDXfx8Vew8FgDvUjVf12W+WXK4VAM6PK5ghwEFTAEw8fq7/1N8eriAKAGdPwXi4KABXp7s+ZPeAcP0/3gEzdjIKwM0LNePIoAAIuP4TNQSgAAykuJg7dCgAw6zrv7KZNQTYkwoAXP9BARhFXf9VTtgQ0P0TKgAAFECk+pfrAdd/739sThQAxmTFY/OgAJwQ138CNoCKUgBOl+OhfsZuIW+BFAAACgB3q6QLuG2AAjAdD/x4Y3gL5OMpAJpdrFz/sVdRAKCKUAAY28F2UgAY+V26bQkUAO5EKCSHUQHQ5D41/jxI27RNZUBRAKCWQAHgMoWNgQLARRtQAKCcQAEEm/0LsIS1tVAApU9C5Xep3vOqqJFbVzkpAAAUAC7XgAIARQUKYL6+P05I1SK8alcAgLpCAQCgAMCFGhQAoLRQAHkG/9AqSanMD9QKAAAFgNHE7OKijQJAhgIKABQYKACkJ6AAAFAAYI4BBYDcBAUAKDMUAEhMUAAAKADATIMCAFkJCgBQbCgAkJKgAABQAID5BgUA8hEUACg5UAAgGUEBAKAA2MNf5WrWOYW/XFoBgEwEBYCLNgrPaKIAQBqCAgBAAQDmHhQAyEFQACzgB2rld5AfWhUAuP6DAgBAAQBmIBRAur6v2kt9Ntlne5z12fw4oQBwEgwBthYKAKkHKAAAFAAvL/40gHnIxkABEJ53gAIYeJnyY51SHLapTCcKwHmQdOAwKgDcp7AlUAD0uhO5/ndcHFdsBQCAAqD/TG3kNwTYqyiAsXNxwY/n/Y99nvbxFAAuVtgGKACCuf5bKBSAu5XpuIpP7z9+/Y+lKLuFDCgKwPFwui6J/l/9jzlDQPcN4Ipz0DtLML6iKhzyOq81fhP0X/9X3sCIVxMAKTesnCFg4zU/56WQzYkCYP71f0emL68BgwgKwJh8xyccfM86mOODp4FXH/qAjc2r/AbA2Og/97/KlZx53jweD6uQcJla9SHvz81L7+w3f52LvosdiwngzFHUr1XDbv2mgfqHziIc5zcAB2brhavyffnml/W3/b+7YgHdrDEB3D3MOlR9b/2mgSVHxiKYAAyk7YeAMbf+4h8j6vrvOqUAqH7zuu5qXDBzr/tIJy6jazUKIHqk7X51Kn7d7v7nBopsD0WlABye3sfv9Ot/o2w9/aOesphjUtX7HwVA0Plpeq1u95kFqwLAYFvoo3Z/o1Ln89t7/JQ/CXzr9q1zydpyzHZ/2uOvLOb9G3gWrsmlzzr2BJkAaHy72XKQlnzaqf/+tVXfa1L6owAYe9VN+BfxH/mO/sQZCqC6Rn/Yqs4QkPYX8972fYdd/73/UQCM6oDkv5P96u/eK/1RAEGp2sv2Dtj+miI5+nevw/blnfcyXVcpgLg8HXmuRH+RNSkVqX7+VQDU7YAt5/PV+6noP74+W4YAL39QAKUjtdp95+ofA0T/bWvVMf39/LuKvw+A5w7qs0dR7u+ugZfn/9FPL1J4ij8J7F7zdHz89GP/GFWi/ywb1/bI43NMMnkFxNMn7dUT64XP6dPAq+vZNP0xARgCmn3mHz/5tyuq3L9tGvj/UvdNf9d/EwAT5gC3/lXTgLs/JgBDwIIhQKx4Uq7/JgBCh4AX/9iJ9EcBcOTs1cxQHSD9Xf8VAKpLB0h/FABhQ4AOkP6u/wqAWqe6cgeogas3SUL6owDihoAxH97xrpCbOfsNBWAI0AH2Ro8AtTcUgCEgYg5w1M9KzJy7v+u/AnDRm3M4dcDN+6F4etoPCsAQoAOQ/q7/JfhXQVQ8CS2OwbB4sra2vQkAk/KFo4Bp4IpVGnldQAGMNeBF0O7oEQTnLs6Y9Hf9VwDMLDOjwEVrIjQ5yG8ArkUrZ3wRNn7dXP8VADrA+U9cLulfnFdAnGb3SU57KXTk+4pLTACGgJl32/EBF7Uyrv8KAB2gCRJXQ/orAM5Mh46nRQ1kroC/p14B4Lp0TgJ2/PqZ39r1XwHgzFwYiJXXIeE72skKACenRERWWJB538geVgCUThOvxdeuTPfPbwOjAFygxtbAicvV4kPavSgAHaAGWop6lNJfAeAsqYHEJyj9C3pnCfoeuTEn6tsXSWiCeTlojDMBsOZQjbxVTQ2U5Ifl+q8AcLQSm8ADkv4KAAcsqwk8FOmvAHDMsprAg5D+jfgReM6BTDhs333HCn0QmHF+9TUBUPG8hV+47gkmi2yhFABO3fxWsJj2oQLA2QM7cCB/J3Ab2w+VV7RIfxSADgDpjwLQASD9UQA6AKQ/CkAHgPRXAOgAkP4KAB2A9Jf+Cfw5gKCz6rhiO2ECCJ0DjAJIfxSADgDpj1dAqQfYGcbOwQQQOgcYBZD+KAAdgPSX/qG8AnKwHWw7xA4xAWAUQPpLfxMAmefcUbclbAkTAKFzgFFA+kt/EwBOvpNvA9gAJgCMAkh/TAAEBoEs8MRRAAgFoeApM41XQHH2HXJvhKQ/JgCiM0JMeKwoAOSFvPAoUQCkBofs8ARRAAgRIeKpoQBITROB4mGhAJAsksUDQgEQnDKCxhNBARCdOELHg0ABIH2kj8VHARCcRMLIaqMASA8m2WR5UQCk55Sosp4oANJjKy28rB4KAEGWlWWWCwWAXAtKN4uDAkANpESedUABoAlusjYKo74sCgAqJuOlcTnpu4ACIKsJ+pL7KAA0gdwHBYAmkPugANAEch8UAJpA7oMCQBkIfVAAKAOhDwoAfSDxQQGgFWQ9KAB0g5RHAQAQ560lAFAAACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCAAgBAAQCgAABQAAAoAAAUAAAKAAAFAIACAEABACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCAAgBAAQCgAABQAAAoAAAUAAAKAAAFAIACAEABACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCAAgBAAQCgAABQAAAoAAAUAAAKAAAFAIACAEABACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCAAgBAAQCgAABQAAAoAAAUAAAKAAAFAIACAEABACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgCAfv4DeoWnqVXEolsAAAAASUVORK5CYII=', 'base64');
-app.get('/manifest.json', (req, res) => {
-    res.type('application/manifest+json').send(JSON.stringify({
-        name: 'BotPanel',
-        short_name: 'BotPanel',
-        start_url: '/',
-        scope: '/',
-        display: 'standalone',
-        background_color: '#121212',
-        theme_color: '#121212',
-        icons: [
-            { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-            { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
-        ]
-    }));
-});
-app.get('/icon-192.png', (req, res) => { res.set('Cache-Control', 'public, max-age=86400'); res.type('png').send(ICON_192); });
-app.get('/icon-512.png', (req, res) => { res.set('Cache-Control', 'public, max-age=86400'); res.type('png').send(ICON_512); });
-app.get('/sw.js', (req, res) => {
-    res.type('application/javascript').send("self.addEventListener('install', () => self.skipWaiting());\nself.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\nself.addEventListener('fetch', () => {});\n");
-});
-
-// Panel sifresi: Render > Environment kismina PANEL_PASSWORD (ve istersen PANEL_USER) ekle
-const PANEL_USER = process.env.PANEL_USER || 'admin';
-const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
-if (!PANEL_PASSWORD) originalWarn('UYARI: PANEL_PASSWORD tanimli degil, panel sifresiz aciliyor!');
-
-function isAuthorized(header) {
-    if (!PANEL_PASSWORD) return true;
-    if (!header || !header.startsWith('Basic ')) return false;
-    const decoded = Buffer.from(header.slice(6), 'base64').toString();
-    const i = decoded.indexOf(':');
-    if (i < 0) return false;
-    return decoded.slice(0, i) === PANEL_USER && decoded.slice(i + 1) === PANEL_PASSWORD;
-}
-
-app.use((req, res, next) => {
-    if (isAuthorized(req.headers.authorization)) return next();
-    res.set('WWW-Authenticate', 'Basic realm="Bot Paneli"');
-    res.status(401).send('Giris gerekli');
-});
-
-io.use((socket, next) => {
-    if (isAuthorized(socket.request.headers.authorization)) return next();
-    next(new Error('unauthorized'));
-});
-
-// Log yakalayici optimize edildi (Regex ile güvenli temizleme)
+// Log yakalayıcı optimize edildi (Regex ile güvenli temizleme)
 const originalLog = console.log;
 console.log = function(...args) {
     originalLog.apply(console, args);
@@ -877,12 +630,7 @@ const htmlPage = `
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#121212">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" href="/icon-192.png">
-    <link rel="apple-touch-icon" href="/icon-192.png">
-    <title>BotPanel</title>
+    <title>Dinamik Çoklu Minecraft Paneli</title>
     <style>
         body { font-family: Arial, sans-serif; background: #121212; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; height: 95vh; box-sizing: border-box; }
         .sidebar { width: 260px; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; border: 1px solid #333; overflow-y: auto; }
@@ -890,7 +638,7 @@ const htmlPage = `
         .bot-form-panel { flex: 1; overflow-y: auto; padding-right: 10px; }
         .chat-panel { flex: 1; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; }
         .card { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; }
-        input, button, select { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
+        input, button { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
         button { background: #4CAF50; cursor: pointer; font-weight: bold; }
         button.stop { background: #f44336; }
         button.chat-btn { background: #2196F3; }
@@ -905,20 +653,6 @@ const htmlPage = `
         label { font-size: 12px; color: #aaa; display: block; margin-top: 5px; }
         .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #777; text-align: center; width: 100%; }
         .dpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; max-width: 200px; margin: 10px auto; }
-        .control-btn { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; }
-        @media (max-width: 800px) {
-            body { flex-direction: column; height: auto; min-height: 100vh; padding: 10px; gap: 10px; }
-            .sidebar { width: auto; padding: 10px; overflow-y: visible; }
-            #botList { display: flex; flex-wrap: wrap; gap: 6px; }
-            .bot-tab { flex: 1 1 140px; }
-            .main-content { flex-direction: column; padding: 10px; overflow-y: visible; }
-            .bot-form-panel { padding-right: 0; overflow-y: visible; }
-            .chat-panel { min-height: 320px; }
-            #chatBox { min-height: 240px; font-size: 12px; }
-            button, input, select { min-height: 44px; font-size: 16px; }
-            .dpad { max-width: 100%; }
-            #inventoryGrid { max-width: 100% !important; overflow-x: auto; }
-        }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -942,9 +676,6 @@ const htmlPage = `
         let chatHistories = {};
         let currentActiveBot = null;
         let mapInterval = null;
-        const LEAVE_OPTIONS = '<option value="">Çıkmasın</option><option value="1">1 saat sonra</option><option value="6">6 saat sonra</option><option value="12">12 saat sonra</option><option value="24">1 gün sonra</option><option value="72">3 gün sonra</option><option value="168">7 gün sonra</option><option value="720">30 gün sonra</option>';
-        const BLOCK_COLORS = ['#444444', '#3b82f6', '#22c55e', '#eab308', '#71717a', '#78350f', '#a16207'];
-        document.addEventListener('visibilitychange', () => { if (!document.hidden && currentActiveBot) updateMap(currentActiveBot); });
 
         // Socket dinleyicisi tek bir kez tanımlandı (Mükerrer tetiklenme engellendi)
         socket.on('chatMessage', function(data) {
@@ -954,12 +685,10 @@ const htmlPage = `
             }
             chatHistories[botId] += text + "\\n";
             
-            if (chatHistories[botId].length > 30000) chatHistories[botId] = chatHistories[botId].slice(-20000);
-
             if (currentActiveBot === botId) {
                 const chatBox = document.getElementById('chatBox');
                 if(chatBox) {
-                    chatBox.textContent = chatHistories[botId];
+                    chatBox.innerHTML = chatHistories[botId];
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             }
@@ -993,45 +722,10 @@ const htmlPage = `
                         <input type="text" id="newLoopMsg2" placeholder="Boş bırakılabilir">
                         <label>Loop 2 Süresi (Saniye)</label>
                         <input type="text" id="newLoopInterval2" value="60">
-                        <label>Otomatik çıkış (isteğe bağlı)</label>
-                        <select id="newLeavePreset">\${LEAVE_OPTIONS}</select>
-                        <label>Ya da özel tarih ve saat (doluysa bu geçerli)</label>
-                        <input type="datetime-local" id="newLeaveCustom">
                         <button onclick="startNewBot()">Botu Başlat ve Kaydet</button>
                     </div>
                 </div>
             \`;
-        }
-
-        function computeLeaveAt(presetId, customId) {
-            const custom = document.getElementById(customId).value;
-            if (custom) { const t = new Date(custom).getTime(); return isNaN(t) ? 0 : t; }
-            const hours = parseFloat(document.getElementById(presetId).value);
-            return hours > 0 ? Date.now() + hours * 3600000 : 0;
-        }
-
-        function formatLeave(ts) {
-            if (!ts) return 'Otomatik çıkış yok';
-            const left = ts - Date.now();
-            const d = new Date(ts).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-            if (left <= 0) return 'Çıkış: ' + d + ' (süre doldu)';
-            const days = Math.floor(left / 86400000);
-            const hrs = Math.floor((left % 86400000) / 3600000);
-            const mins = Math.floor((left % 3600000) / 60000);
-            return 'Çıkış: ' + d + ' (kalan ' + (days ? days + ' g ' : '') + hrs + ' sa ' + mins + ' dk)';
-        }
-
-        async function setLeave(id, clear) {
-            const leaveAt = clear ? 0 : computeLeaveAt('leavePreset', 'leaveCustom');
-            if (!clear && !leaveAt) { alert('Bir süre ya da tarih seç.'); return; }
-            const res = await fetch('/leave-at', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, leaveAt})});
-            const json = await res.json();
-            alert(json.message);
-            if (json.status === 'success') {
-                bots[id].leaveAt = leaveAt;
-                const el = document.getElementById('leaveInfo');
-                if (el) el.innerHTML = '<b>' + formatLeave(leaveAt) + '</b>';
-            }
         }
 
         async function startNewBot() {
@@ -1048,8 +742,7 @@ const htmlPage = `
                 recurringMsg1: document.getElementById('newLoopMsg1').value,
                 recurringInterval1: document.getElementById('newLoopInterval1').value,
                 recurringMsg2: document.getElementById('newLoopMsg2').value,
-                recurringInterval2: document.getElementById('newLoopInterval2').value,
-                leaveAt: computeLeaveAt('newLeavePreset', 'newLeaveCustom')
+                recurringInterval2: document.getElementById('newLoopInterval2').value
             };
 
             let res = await fetch('/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
@@ -1067,7 +760,7 @@ const htmlPage = `
             let listHtml = '';
             for(let id in bots) {
                 let activeClass = (currentActiveBot === id) ? 'active' : '';
-                listHtml += \`<div class="bot-tab \${activeClass}" onclick="selectBot('\${id}')">\${bots[id].online === true ? '🟢' : (bots[id].online === false ? '🔴' : '⚪')} \${id} (\${bots[id].username})</div>\`;
+                listHtml += \`<div class="bot-tab \${activeClass}" onclick="selectBot('\${id}')">\${id} (\${bots[id].username})</div>\`;
             }
             document.getElementById('botList').innerHTML = listHtml;
         }
@@ -1083,42 +776,34 @@ const htmlPage = `
                     <div class="card">
                         <p><b>Kullanıcı:</b> \${bots[id].username}</p>
                         <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
-                        <p id="leaveInfo"><b>\${formatLeave(bots[id].leaveAt)}</b></p>
-                        <button class="stop" onclick="stopBot('\${id}')">Botu Şimdi Durdur / Oyundan Çıkar</button>
-                        <label>Otomatik çıkış zamanı</label>
-                        <select id="leavePreset">\${LEAVE_OPTIONS}</select>
-                        <input type="datetime-local" id="leaveCustom">
-                        <button class="loop-btn" onclick="setLeave('\${id}')">Çıkış Zamanını Kaydet</button>
-                        <button onclick="setLeave('\${id}', true)" style="background:#607D8B">Otomatik Çıkışı Kaldır</button>
+                        <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
                     </div>
-                    <div class="card">
-                        <h3>Anlık Mesaj Gönder</h3>
-                        <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
-                        <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
-                    </div>
-                    <div class="card">
-                        <h3>Bot Hareket Kontrolleri</h3>
-                        <div class="dpad">
-                            <div></div>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'forward', true)" onpointerup="sendControl('\${id}', 'forward', false)" onpointerleave="sendControl('\${id}', 'forward', false)" onpointercancel="sendControl('\${id}', 'forward', false)" oncontextmenu="return false">İleri</button>
-                            <div></div>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'left', true)" onpointerup="sendControl('\${id}', 'left', false)" onpointerleave="sendControl('\${id}', 'left', false)" onpointercancel="sendControl('\${id}', 'left', false)" oncontextmenu="return false">Sol</button>
-                            <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'right', true)" onpointerup="sendControl('\${id}', 'right', false)" onpointerleave="sendControl('\${id}', 'right', false)" onpointercancel="sendControl('\${id}', 'right', false)" oncontextmenu="return false">Sağ</button>
-                            <div></div>
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'back', true)" onpointerup="sendControl('\${id}', 'back', false)" onpointerleave="sendControl('\${id}', 'back', false)" onpointercancel="sendControl('\${id}', 'back', false)" oncontextmenu="return false">Geri</button>
-                            <div></div>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
-                            <button class="control-btn" onpointerdown="sendControl('\${id}', 'sneak', true)" onpointerup="sendControl('\${id}', 'sneak', false)" onpointerleave="sendControl('\${id}', 'sneak', false)" onpointercancel="sendControl('\${id}', 'sneak', false)" oncontextmenu="return false">Eğil (Sneak)</button>
-                            <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
-                        </div>
-                    </div>
+
                     <div class="card">
                         <h3>Canlı Harita (Radar)</h3>
                         <canvas id="botMap" width="220" height="220" style="background: #111; border: 1px solid #444; border-radius: 4px; display: block; margin: 0 auto;"></canvas>
                         <div id="coordText" style="text-align: center; font-size: 12px; color: #aaa; margin-top: 5px;">X: 0, Y: 0, Z: 0</div>
                     </div>
+
+                    <div class="card">
+                        <h3>Bot Hareket Kontrolleri</h3>
+                        <div class="dpad">
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'forward', true)" onmouseup="sendControl('\${id}', 'forward', false)" onmouseleave="sendControl('\${id}', 'forward', false)">İleri</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'left', true)" onmouseup="sendControl('\${id}', 'left', false)" onmouseleave="sendControl('\${id}', 'left', false)">Sol</button>
+                            <button class="control-btn" onclick="sendJump('\${id}')">Zıpla</button>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'right', true)" onmouseup="sendControl('\${id}', 'right', false)" onmouseleave="sendControl('\${id}', 'right', false)">Sağ</button>
+                            <div></div>
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'back', true)" onmouseup="sendControl('\${id}', 'back', false)" onmouseleave="sendControl('\${id}', 'back', false)">Geri</button>
+                            <div></div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 8px;">
+                            <button class="control-btn" onmousedown="sendControl('\${id}', 'sneak', true)" onmouseup="sendControl('\${id}', 'sneak', false)" onmouseleave="sendControl('\${id}', 'sneak', false)">Eğil (Sneak)</button>
+                            <button class="control-btn" onclick="clearBotControls('\${id}')" style="background: #d32f2f;">Durdur</button>
+                        </div>
+                    </div>
+
                     <div class="card">
                         <h3>Bot Envanteri (Görsel Izgara)</h3>
                         <div style="display: flex; gap: 5px; margin-bottom: 5px;">
@@ -1128,6 +813,11 @@ const htmlPage = `
                         <div id="inventoryGrid" style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #111; padding: 8px; border-radius: 6px; margin-top: 10px; max-width: fit-content;">
                             <span style="grid-column: span 9; color: #777; font-size: 11px; text-align: center;">Envanteri görmek için butona basın.</span>
                         </div>
+                    </div>
+                    <div class="card">
+                        <h3>Anlık Mesaj Gönder</h3>
+                        <input type="text" id="manualMsg" placeholder="Mesaj veya komut yazın...">
+                        <button class="chat-btn" onclick="sendChat('\${id}')">Gönder</button>
                     </div>
                     <div class="card">
                         <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
@@ -1154,7 +844,7 @@ const htmlPage = `
 
             const chatBox = document.getElementById('chatBox');
             if (chatHistories[id]) {
-                chatBox.textContent = chatHistories[id];
+                chatBox.innerHTML = chatHistories[id];
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
 
@@ -1165,16 +855,12 @@ const htmlPage = `
 
         function startMapPolling(id) {
             updateMap(id);
-            mapInterval = setInterval(() => updateMap(id), 5000);
+            mapInterval = setInterval(() => updateMap(id), 1000);
         }
 
         async function updateMap(id) {
-            if (document.hidden) return;
-            let json;
-            try {
-                let res = await fetch('/position/' + id);
-                json = await res.json();
-            } catch (e) { return; }
+            let res = await fetch('/position/' + id);
+            let json = await res.json();
             const canvas = document.getElementById('botMap');
             const coordText = document.getElementById('coordText');
             if(!canvas || !coordText) return;
@@ -1203,26 +889,26 @@ const htmlPage = `
                 }
 
                 if (blocks && blocks.length > 0) {
-                    const S = 7;
-                    const fx = x - Math.floor(x);
-                    const fz = z - Math.floor(z);
                     blocks.forEach(b => {
-                        let relX = (b[0] - fx) * S;
-                        let relZ = (b[1] - fz) * S;
-                        ctx.fillStyle = BLOCK_COLORS[b[2]] || '#444444';
-                        ctx.fillRect(relX - 3.5, relZ - 3.5, S, S);
+                        let relX = (b.x - x) * 4;
+                        let relZ = (b.z - z) * 4;
+
+                        if (Math.abs(relX) < cx + 10 && Math.abs(relZ) < cy + 10) {
+                            ctx.fillStyle = getBlockColor(b.name);
+                            ctx.fillRect(relX - 2, relZ - 2, 4, 4);
+                        }
                     });
                 }
 
                 if (entities && entities.length > 0) {
                     entities.forEach(e => {
-                        let relX = (e[0] - x) * 7;
-                        let relZ = (e[1] - z) * 7;
+                        let relX = (e.x - x) * 4;
+                        let relZ = (e.z - z) * 4;
 
                         if (Math.abs(relX) < cx && Math.abs(relZ) < cy) {
                             ctx.save();
                             ctx.translate(relX, relZ);
-                            ctx.fillStyle = e[2] === 1 ? '#2196F3' : '#ff9800';
+                            ctx.fillStyle = e.type === 'player' ? '#2196F3' : '#ff9800';
                             ctx.beginPath();
                             ctx.arc(0, 0, 3, 0, Math.PI * 2);
                             ctx.fill();
@@ -1390,35 +1076,11 @@ const htmlPage = `
             }
         }
 
-        async function refreshStatus() {
-            if (document.hidden) return;
-            try {
-                let res = await fetch('/bots');
-                let fresh = await res.json();
-                for (let id in fresh) { if (bots[id]) { bots[id].online = fresh[id].online; bots[id].leaveAt = fresh[id].leaveAt; } }
-                let removedCurrent = false;
-                for (let id in bots) {
-                    if (!fresh[id]) { if (id === currentActiveBot) removedCurrent = true; delete bots[id]; delete chatHistories[id]; }
-                }
-                updateBotList();
-                if (removedCurrent) {
-                    showAddBotForm();
-                } else if (currentActiveBot && document.getElementById('leaveInfo')) {
-                    document.getElementById('leaveInfo').innerHTML = '<b>' + formatLeave(bots[currentActiveBot].leaveAt) + '</b>';
-                }
-            } catch (e) {}
-        }
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-        }
-
         async function init() {
             let res = await fetch('/bots');
             let activeBots = await res.json();
             bots = activeBots;
             updateBotList();
-            setInterval(refreshStatus, 15000);
             let keys = Object.keys(bots);
             if(keys.length > 0) {
                 selectBot(keys[0]);
@@ -1444,13 +1106,7 @@ io.on('connection', (socket) => {
 });
 
 app.get('/bots', (req, res) => {
-    const list = manager.getActiveBots();
-    for (const id in list) {
-        const inst = manager.bots.get(id);
-        list[id].online = !!(inst && inst.bot && inst.bot.entity);
-        delete list[id].startupCommands;
-    }
-    res.json(list);
+    res.json(manager.getActiveBots());
 });
 
 app.get('/inventory/:id', (req, res) => {
@@ -1462,61 +1118,19 @@ app.get('/inventory/:id', (req, res) => {
     }
 });
 
-function blockColorIndex(name) {
-    if (name.includes('water')) return 1;
-    if (name.includes('grass') || name.includes('leaves')) return 2;
-    if (name.includes('sand')) return 3;
-    if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return 4;
-    if (name.includes('log') || name.includes('wood') || name.includes('planks')) return 5;
-    if (name.includes('dirt')) return 6;
-    return 0;
-}
-
 app.get('/position/:id', (req, res) => {
-    const raw = manager.getPosition ? manager.getPosition(req.params.id) : null;
-    let body;
-    if (raw) {
-        const R = 15; // radar yaricapi (blok)
-        const bx = Math.floor(raw.x);
-        const bz = Math.floor(raw.z);
-        const blocks = [];
-        for (const b of raw.blocks || []) {
-            const dx = b.x - bx;
-            const dz = b.z - bz;
-            if (Math.abs(dx) <= R && Math.abs(dz) <= R) blocks.push([dx, dz, blockColorIndex(b.name)]);
-        }
-        const entities = (raw.entities || [])
-            .filter(e => Math.abs(e.x - raw.x) <= R + 2 && Math.abs(e.z - raw.z) <= R + 2)
-            .map(e => [Math.round(e.x * 10) / 10, Math.round(e.z * 10) / 10, e.type === 'player' ? 1 : 0]);
-        body = { status: "success", position: { x: raw.x, y: raw.y, z: raw.z, yaw: raw.yaw, entities, blocks } };
+    const pos = manager.getPosition ? manager.getPosition(req.params.id) : null;
+    if (pos) {
+        res.json({ status: "success", position: pos });
     } else {
-        body = { status: "error", message: "Bot aktif değil veya konum alınamadı!" };
-    }
-    const payload = Buffer.from(JSON.stringify(body));
-    if ((req.headers['accept-encoding'] || '').includes('gzip')) {
-        res.set({ 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' });
-        res.send(zlib.gzipSync(payload));
-    } else {
-        res.type('json').send(payload);
+        res.json({ status: "error", message: "Bot aktif değil veya konum alınamadı!" });
     }
 });
 
 app.post('/start', (req, res) => {
     const { id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2 } = req.body;
-    const leaveAt = Number(req.body.leaveAt) || 0;
-    if (leaveAt && leaveAt <= Date.now()) {
-        return res.json({ status: "error", message: "Çıkış zamanı geçmişte olamaz!" });
-    }
-    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true, leaveAt);
+    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true);
     res.json(result);
-});
-
-app.post('/leave-at', (req, res) => {
-    const leaveAt = Number(req.body.leaveAt) || 0;
-    if (leaveAt && leaveAt <= Date.now()) {
-        return res.json({ status: "error", message: "Çıkış zamanı geçmişte olamaz!" });
-    }
-    res.json(manager.setLeaveAt(req.body.id, leaveAt));
 });
 
 app.post('/control', (req, res) => {
