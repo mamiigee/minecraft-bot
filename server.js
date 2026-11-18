@@ -95,7 +95,7 @@ const htmlPage = `
         .bot-form-panel { flex: 1; overflow-y: auto; padding-right: 10px; }
         .chat-panel { flex: 1; background: #1e1e1e; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; }
         .card { background: #222; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #444; }
-        input, button { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
+        input, button, select { padding: 8px; margin: 5px 0; background: #2d2d2d; color: #fff; border: 1px solid #444; width: 100%; box-sizing: border-box; border-radius: 4px; }
         button { background: #4CAF50; cursor: pointer; font-weight: bold; }
         button.stop { background: #f44336; }
         button.chat-btn { background: #2196F3; }
@@ -120,7 +120,7 @@ const htmlPage = `
             .bot-form-panel { padding-right: 0; overflow-y: visible; }
             .chat-panel { min-height: 320px; }
             #chatBox { min-height: 240px; font-size: 12px; }
-            button, input { min-height: 44px; font-size: 16px; }
+            button, input, select { min-height: 44px; font-size: 16px; }
             .dpad { max-width: 100%; }
             #inventoryGrid { max-width: 100% !important; overflow-x: auto; }
         }
@@ -147,6 +147,7 @@ const htmlPage = `
         let chatHistories = {};
         let currentActiveBot = null;
         let mapInterval = null;
+        const LEAVE_OPTIONS = '<option value="">Çıkmasın</option><option value="1">1 saat sonra</option><option value="6">6 saat sonra</option><option value="12">12 saat sonra</option><option value="24">1 gün sonra</option><option value="72">3 gün sonra</option><option value="168">7 gün sonra</option><option value="720">30 gün sonra</option>';
         const BLOCK_COLORS = ['#444444', '#3b82f6', '#22c55e', '#eab308', '#71717a', '#78350f', '#a16207'];
         document.addEventListener('visibilitychange', () => { if (!document.hidden && currentActiveBot) updateMap(currentActiveBot); });
 
@@ -197,10 +198,45 @@ const htmlPage = `
                         <input type="text" id="newLoopMsg2" placeholder="Boş bırakılabilir">
                         <label>Loop 2 Süresi (Saniye)</label>
                         <input type="text" id="newLoopInterval2" value="60">
+                        <label>Otomatik çıkış (isteğe bağlı)</label>
+                        <select id="newLeavePreset">\${LEAVE_OPTIONS}</select>
+                        <label>Ya da özel tarih ve saat (doluysa bu geçerli)</label>
+                        <input type="datetime-local" id="newLeaveCustom">
                         <button onclick="startNewBot()">Botu Başlat ve Kaydet</button>
                     </div>
                 </div>
             \`;
+        }
+
+        function computeLeaveAt(presetId, customId) {
+            const custom = document.getElementById(customId).value;
+            if (custom) { const t = new Date(custom).getTime(); return isNaN(t) ? 0 : t; }
+            const hours = parseFloat(document.getElementById(presetId).value);
+            return hours > 0 ? Date.now() + hours * 3600000 : 0;
+        }
+
+        function formatLeave(ts) {
+            if (!ts) return 'Otomatik çıkış yok';
+            const left = ts - Date.now();
+            const d = new Date(ts).toLocaleString('tr-TR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+            if (left <= 0) return 'Çıkış: ' + d + ' (süre doldu)';
+            const days = Math.floor(left / 86400000);
+            const hrs = Math.floor((left % 86400000) / 3600000);
+            const mins = Math.floor((left % 3600000) / 60000);
+            return 'Çıkış: ' + d + ' (kalan ' + (days ? days + ' g ' : '') + hrs + ' sa ' + mins + ' dk)';
+        }
+
+        async function setLeave(id, clear) {
+            const leaveAt = clear ? 0 : computeLeaveAt('leavePreset', 'leaveCustom');
+            if (!clear && !leaveAt) { alert('Bir süre ya da tarih seç.'); return; }
+            const res = await fetch('/leave-at', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, leaveAt})});
+            const json = await res.json();
+            alert(json.message);
+            if (json.status === 'success') {
+                bots[id].leaveAt = leaveAt;
+                const el = document.getElementById('leaveInfo');
+                if (el) el.innerHTML = '<b>' + formatLeave(leaveAt) + '</b>';
+            }
         }
 
         async function startNewBot() {
@@ -217,7 +253,8 @@ const htmlPage = `
                 recurringMsg1: document.getElementById('newLoopMsg1').value,
                 recurringInterval1: document.getElementById('newLoopInterval1').value,
                 recurringMsg2: document.getElementById('newLoopMsg2').value,
-                recurringInterval2: document.getElementById('newLoopInterval2').value
+                recurringInterval2: document.getElementById('newLoopInterval2').value,
+                leaveAt: computeLeaveAt('newLeavePreset', 'newLeaveCustom')
             };
 
             let res = await fetch('/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
@@ -251,7 +288,13 @@ const htmlPage = `
                     <div class="card">
                         <p><b>Kullanıcı:</b> \${bots[id].username}</p>
                         <p><b>Sunucu:</b> \${bots[id].host}:\${bots[id].port}</p>
-                        <button class="stop" onclick="stopBot('\${id}')">Botu Durdur / Oyundan Çıkar</button>
+                        <p id="leaveInfo"><b>\${formatLeave(bots[id].leaveAt)}</b></p>
+                        <button class="stop" onclick="stopBot('\${id}')">Botu Şimdi Durdur / Oyundan Çıkar</button>
+                        <label>Otomatik çıkış zamanı</label>
+                        <select id="leavePreset">\${LEAVE_OPTIONS}</select>
+                        <input type="datetime-local" id="leaveCustom">
+                        <button class="loop-btn" onclick="setLeave('\${id}')">Çıkış Zamanını Kaydet</button>
+                        <button onclick="setLeave('\${id}', true)" style="background:#607D8B">Otomatik Çıkışı Kaldır</button>
                     </div>
                     <div class="card">
                         <h3>Anlık Mesaj Gönder</h3>
@@ -292,6 +335,22 @@ const htmlPage = `
                         </div>
                     </div>
                     <div class="card">
+                        <h3>Tarla Görevi (Pancar)</h3>
+                        <label>Sandık konumu (x y z)</label>
+                        <input type="text" id="farmChest" placeholder="100 64 200">
+                        <label>Tarla köşe 1 (x y z) - y: toprak katmanı</label>
+                        <input type="text" id="farmA" placeholder="110 64 200" oninput="updateFarmNeeds()">
+                        <label>Tarla köşe 2 (x y z)</label>
+                        <input type="text" id="farmB" placeholder="130 64 220" oninput="updateFarmNeeds()">
+                        <label>AFK yeri / ev (x y z)</label>
+                        <input type="text" id="farmHome" placeholder="95 64 195">
+                        <label>Su + ışık aralığı (blok, 3-9 arası)</label>
+                        <input type="text" id="farmStep" value="4" oninput="updateFarmNeeds()">
+                        <div id="farmNeeds" style="font-size: 13px; color: #ccc; margin: 8px 0; line-height: 1.7;"></div>
+                        <button class="loop-btn" onclick="startFarm('\${id}')">Tarlayı Başlat</button>
+                        <button class="stop" onclick="stopFarm('\${id}')">Tarlayı Durdur</button>
+                    </div>
+                    <div class="card">
                         <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
                         <label>Loop 1 Mesajı</label>
                         <input type="text" id="loopMsgInput1" value="\${bots[id].recurringMsg1 || ''}" placeholder="Sürekli tekrarlanacak mesaj 1">
@@ -321,6 +380,8 @@ const htmlPage = `
             }
 
             socket.emit('joinBotRoom', id);
+            loadFarmFields(id);
+            updateFarmNeeds();
             loadInventory(id);
             startMapPolling(id);
         }
@@ -540,6 +601,66 @@ const htmlPage = `
             showAddBotForm();
         }
 
+        function parseXYZ(text) {
+            const n = String(text || '').trim().split(/[ ,]+/).map(Number);
+            return n.length === 3 && n.every(Number.isFinite) ? { x: n[0], y: n[1], z: n[2] } : null;
+        }
+
+        const FARM_FIELDS = ['farmChest', 'farmA', 'farmB', 'farmHome', 'farmStep'];
+
+        function loadFarmFields(id) {
+            try {
+                const saved = JSON.parse(localStorage.getItem('farm:' + id) || '{}');
+                FARM_FIELDS.forEach(f => { const el = document.getElementById(f); if (el && saved[f]) el.value = saved[f]; });
+            } catch (e) {}
+        }
+
+        function farmSpans(min, max, S) {
+            const out = [];
+            for (let s = min; s <= max; s += S) out.push(Math.floor((s + Math.min(s + S - 1, max)) / 2));
+            return out;
+        }
+
+        function updateFarmNeeds() {
+            const box = document.getElementById('farmNeeds');
+            if (!box) return;
+            const a = parseXYZ(document.getElementById('farmA').value);
+            const b = parseXYZ(document.getElementById('farmB').value);
+            if (!a || !b) { box.innerHTML = 'Köşe 1 ve köşe 2 koordinatlarını yazınca gereken malzemeler burada görünür.'; return; }
+            const S = Math.min(9, Math.max(3, Number(document.getElementById('farmStep').value) || 4));
+            const w = Math.abs(a.x - b.x) + 1, h = Math.abs(a.z - b.z) + 1;
+            const points = farmSpans(0, w - 1, S).length * farmSpans(0, h - 1, S).length;
+            const tiles = w * h;
+            const seeds = tiles - points;
+            const slots = points + Math.ceil(seeds / 64) + Math.ceil(points / 64) + 1;
+            let html = '<b>' + w + ' x ' + h + ' alan (' + tiles + ' kare), aralık ' + S + '</b><br>';
+            html += '• Çapa: 1 (en fazla ' + seeds + ' kare sürülür; demir çapa yaklaşık 250, elmas yaklaşık 1561 kare dayanır)<br>';
+            html += '• Pancar tohumu: ' + seeds + '<br>';
+            html += '• Dolu su kovası: ' + points + '<br>';
+            html += '• Glowstone: ' + points + '<br>';
+            html += 'Envanter: ' + slots + ' / 36 slot';
+            if (slots > 36) html += ' <span style="color:#f44336">- YETMEZ, alanı küçült ya da aralığı artır</span>';
+            if (tiles > 2500) html += '<br><span style="color:#f44336">Alan çok büyük (en fazla 2500 kare)</span>';
+            box.innerHTML = html;
+        }
+
+        async function startFarm(id) {
+            const vals = {};
+            FARM_FIELDS.forEach(f => { vals[f] = document.getElementById(f).value; });
+            try { localStorage.setItem('farm:' + id, JSON.stringify(vals)); } catch (e) {}
+            const body = { id, chest: parseXYZ(vals.farmChest), a: parseXYZ(vals.farmA), b: parseXYZ(vals.farmB), home: parseXYZ(vals.farmHome), step: Number(vals.farmStep) || 4 };
+            if (!body.chest || !body.a || !body.b || !body.home) { alert('Dört koordinatı da x y z biçiminde yaz.'); return; }
+            const res = await fetch('/farm/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+            const json = await res.json();
+            alert(json.message);
+        }
+
+        async function stopFarm(id) {
+            const res = await fetch('/farm/stop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
+            const json = await res.json();
+            alert(json.message);
+        }
+
         async function sendChat(id) {
             let msg = document.getElementById('manualMsg').value;
             if(!msg) return;
@@ -557,8 +678,17 @@ const htmlPage = `
             try {
                 let res = await fetch('/bots');
                 let fresh = await res.json();
-                for (let id in fresh) { if (bots[id]) bots[id].online = fresh[id].online; }
+                for (let id in fresh) { if (bots[id]) { bots[id].online = fresh[id].online; bots[id].leaveAt = fresh[id].leaveAt; } }
+                let removedCurrent = false;
+                for (let id in bots) {
+                    if (!fresh[id]) { if (id === currentActiveBot) removedCurrent = true; delete bots[id]; delete chatHistories[id]; }
+                }
                 updateBotList();
+                if (removedCurrent) {
+                    showAddBotForm();
+                } else if (currentActiveBot && document.getElementById('leaveInfo')) {
+                    document.getElementById('leaveInfo').innerHTML = '<b>' + formatLeave(bots[currentActiveBot].leaveAt) + '</b>';
+                }
             } catch (e) {}
         }
 
@@ -656,8 +786,31 @@ app.get('/position/:id', (req, res) => {
 
 app.post('/start', (req, res) => {
     const { id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2 } = req.body;
-    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true);
+    const leaveAt = Number(req.body.leaveAt) || 0;
+    if (leaveAt && leaveAt <= Date.now()) {
+        return res.json({ status: "error", message: "Çıkış zamanı geçmişte olamaz!" });
+    }
+    const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true, leaveAt);
     res.json(result);
+});
+
+app.post('/farm/start', (req, res) => {
+    const { id, chest, a, b, home } = req.body;
+    const ok = (v) => v && [v.x, v.y, v.z].every((n) => Number.isFinite(Number(n)));
+    if (![chest, a, b, home].every(ok)) return res.json({ status: "error", message: "Koordinatlar eksik ya da hatalı!" });
+    res.json(manager.startFarm(id, { chest, a, b, home, step: Number(req.body.step) || 4 }));
+});
+
+app.post('/farm/stop', (req, res) => {
+    res.json(manager.stopFarm(req.body.id));
+});
+
+app.post('/leave-at', (req, res) => {
+    const leaveAt = Number(req.body.leaveAt) || 0;
+    if (leaveAt && leaveAt <= Date.now()) {
+        return res.json({ status: "error", message: "Çıkış zamanı geçmişte olamaz!" });
+    }
+    res.json(manager.setLeaveAt(req.body.id, leaveAt));
 });
 
 app.post('/control', (req, res) => {
