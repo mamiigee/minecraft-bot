@@ -1,12 +1,15 @@
 const mineflayer = require('mineflayer');
 const fs = require('fs');
 const Vec3 = require('vec3');
+let farm = null;
+try { farm = require('./farm'); } catch (e) { console.log('farm.js bulunamadi, tarla modu kapali'); }
 
 class AFKBotManager {
     constructor() {
         this.bots = new Map();
         this.dataFile = './bots.json';
         this.loadAndRestartSavedBots();
+        this.leaveTimer = setInterval(() => this.checkLeaveTimes(), 30000);
     }
 
     saveBots() {
@@ -21,7 +24,8 @@ class AFKBotManager {
                 recurringMsg1: b.recurringMsg1,
                 recurringInterval1: b.recurringInterval1,
                 recurringMsg2: b.recurringMsg2,
-                recurringInterval2: b.recurringInterval2
+                recurringInterval2: b.recurringInterval2,
+                leaveAt: b.leaveAt || 0
             };
         }
         fs.writeFileSync(this.dataFile, JSON.stringify(list, null, 2));
@@ -34,13 +38,17 @@ class AFKBotManager {
                 let savedBots = JSON.parse(data);
                 for (let id in savedBots) {
                     let b = savedBots[id];
-                    this.startBot(id, b.username, b.host, b.port, b.version, b.startupCommands, b.recurringMsg1, b.recurringInterval1, b.recurringMsg2, b.recurringInterval2, false);
+                    if (b.leaveAt && b.leaveAt <= Date.now()) {
+                        console.log(`[BOT:${id}] Cikis zamani gecmis, bot baslatilmadi.`);
+                        continue;
+                    }
+                    this.startBot(id, b.username, b.host, b.port, b.version, b.startupCommands, b.recurringMsg1, b.recurringInterval1, b.recurringMsg2, b.recurringInterval2, false, b.leaveAt || 0);
                 }
             }
         } catch (e) {}
     }
 
-    startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, shouldSave = true) {
+    startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, shouldSave = true, leaveAt = 0) {
         if (this.bots.has(id)) {
             this.stopBot(id);
         }
@@ -55,6 +63,7 @@ class AFKBotManager {
             recurringInterval1: parseInt(recurringInterval1) || 0,
             recurringMsg2: recurringMsg2 || '',
             recurringInterval2: parseInt(recurringInterval2) || 0,
+            leaveAt: Number(leaveAt) > 0 ? Number(leaveAt) : 0,
             bot: null,
             loopTimer1: null,
             loopTimer2: null,
@@ -103,6 +112,7 @@ class AFKBotManager {
                 lastR = r; lastW = w; lastPackets = netPackets;
             }, 600000);
             
+            if (farm) { try { farm.setup(botInstance.bot); } catch (e) {} }
             botInstance.bot.on('spawn', () => {
                 console.log(`[BOT:${id}] Oyuna başarıyla bağlandı.`);
                 if (botInstance.startupCommands) {
@@ -488,7 +498,47 @@ class AFKBotManager {
         return { status: "success", message: `Bot (${id}) durduruldu!` };
     }
 
-    getActiveBots() {
+    startFarm(id, cfg) {
+        const b = this.bots.get(id);
+        if (!b || !b.bot || !b.bot.entity) return { status: "error", message: "Bot oyunda değil!" };
+        if (!farm) return { status: "error", message: "farm.js yüklenmemiş!" };
+        if (b.farmState && b.farmState.running) return { status: "error", message: "Tarla görevi zaten çalışıyor!" };
+        const state = { running: true, stop: false };
+        b.farmState = state;
+        const log = (m) => console.log(`[BOT:${id}] [TARLA] ${m}`);
+        farm.run(b.bot, cfg, log, state)
+            .catch((e) => log('Hata: ' + e.message))
+            .then(() => { state.running = false; });
+        return { status: "success", message: "Tarla görevi başlatıldı. İlerlemeyi konsoldan izle." };
+    }
+
+    stopFarm(id) {
+        const b = this.bots.get(id);
+        if (!b || !b.farmState || !b.farmState.running) return { status: "error", message: "Çalışan tarla görevi yok." };
+        b.farmState.stop = true;
+        try { b.bot.pathfinder.stop(); } catch (e) {}
+        return { status: "success", message: "Durdurma isteği gönderildi, bot sandığa dönüp eşyaları bırakacak." };
+    }
+
+    checkLeaveTimes() {
+        const now = Date.now();
+        for (const [id, b] of Array.from(this.bots)) {
+            if (b.leaveAt && b.leaveAt <= now) {
+                console.log(`[BOT:${id}] Belirlenen cikis zamani geldi, bot oyundan cikiyor.`);
+                this.stopBot(id);
+            }
+        }
+    }
+
+    setLeaveAt(id, leaveAt) {
+        const b = this.bots.get(id);
+        if (!b) return { status: "error", message: "Bot bulunamadı!" };
+        b.leaveAt = Number(leaveAt) > 0 ? Number(leaveAt) : 0;
+        this.saveBots();
+        return { status: "success", message: b.leaveAt ? "Çıkış zamanı kaydedildi." : "Otomatik çıkış kaldırıldı." };
+    }
+
+    getActiveBots() {
         let list = {};
         for (let [id, b] of this.bots) {
             list[id] = {
@@ -500,7 +550,8 @@ class AFKBotManager {
                 recurringMsg1: b.recurringMsg1,
                 recurringInterval1: b.recurringInterval1,
                 recurringMsg2: b.recurringMsg2,
-                recurringInterval2: b.recurringInterval2
+                recurringInterval2: b.recurringInterval2,
+                leaveAt: b.leaveAt || 0
             };
         }
         return list;
