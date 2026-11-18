@@ -12,12 +12,10 @@ const manager = new AFKBotManager();
 
 app.use(express.json());
 
-// UptimeRobot icin sifresiz, cok hafif adres
 app.get('/health', (req, res) => res.send('ok'));
 
-// PWA dosyalari: sifre istemez (icinde gizli bir sey yok)
-const ICON_192 = Buffer.from('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', 'base64');
-const ICON_512 = Buffer.from('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', 'base64');
+const ICON_192 = Buffer.from('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', 'base64');
+const ICON_512 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAAPGklEQVR42u3dy61cx5IF0EuCFtRcgOzQQA7IDNolM+gAB7SDAB3RgAAh8HdPnV9GxF4Lb9Jo9OuqPJl7Z5wSxTePx+MFgDxvLQGAAgBAAQCgAABQAAAoAAAUAAAKAAAFAIACAEABAKAAAFAAACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQAAAoAAAUAAAKAAAFAIACAEABAKAAAFAAACgAABQAAAoAAAUAgAIAQAEAoAAAUAAAKAAAFAAACgAABQCAAgBAAQCgAAAUAAAKAAAFAIACAEABAKAAAFAAAPTzzhIw1R///HnKf8+XD58tJiO9eTweVgEprxtQACDrtQIKACS+PkABgNBXBigAEPrKAAUAcl8ToABA7msCFADIfU2AAgC5rwlQAMj9vuk56buAAmBO9K9NxqgviwKAlVFYPwGtAwoA0S/pLA4KANEv1ywXCgBZJsisHgoA4SW2rCcKgLyoklOWFwVAVjYJJquNAiArjCSRxUcBIH3wIFAATA8dieOJoADIChop4wGhAJAseFgoAKYHijTx1FAACBE8QRQA07NDcHiUKADkBR4rCoDpMSEjPF+GeWsJpIN0GGbfw/K3N5sAEP2i3xP3xBUA8VkgCDx6ZvMKSASIgOF2PEqvg0wAiH5sBpvBBIADj1EAEwBT01/02xv2hgkAJxyjgDnABIDox26xW0wAOM8YBYwCCgDpjw5gAq+AEtNf9GMLYQJxdGHPxjAHKACkPzqAxrqSgiAEQAiAEAAhAEIIgBAAIQBCAIQQACEAQgCEAAghAEIARBCAIQACAEQAiAEQAiAEAAhAEIIgBAAIQBCAIQQACEAQgCEAAghAEIAhAAIARACIIQACAEQAiAEQAgBEAIgBEAIgBACIARACIAQACEEQAiAEAAhd90Tgh89vvy76e+/378I2rZtd8t+5vdWYuAJgIKhAaZVAClkpjzx4RsEID90YrM7bEcAlIobSMoG0Ln8jU+ezkgAqD5nCtnSHBUAusSUpK0b2AHklJh9G3gAd5cMlGabDzgbQYRocc+A+fmOA0pzBCQ5kf+gTdTT4MXdalnagHLaf6bh2oqxmRV4+tEMPDOUHKD09vgzt0ANDmZvowfSU5GzwMMTPGWmABsSx/SwfMDBlhnQB6hrBHtWh6yBlGRIFqF/sLqNTsq/2LWRiSB2gwKj1eMJrwFNjPUKRHKDwkJ1M8wBjCx+/IEO7LD2dNvj9/vXzr/DnT2/PhQ3Q3832PhYcqG/JD7nt+vT2/Pn6MWXXFs2Q6ESiDj3lJnRhd7KTBakACqz0R+frlOgf7TeQIalClvDrHFFuf2g8FSb0dwCOj/vYABRlP4K9QiBDgia0q3lGFIWN9FRbztVueFn6wABTTKvaeLGlHKoQhtW56PkAhZ5L4dG2nGqRgQrtgcKfH8ZzZxNa16mEzD6R4zeXYUwNQZOmJoifWZjoNVedyzNuBxrc+UXhpzgqaAdQYuzTzctZxkHCgRv8ItJ8Sgwk3IetWenc/a3O82uzrpvt0AnQ0oH3OF8xd5yw0sp9A1FpMSMF9WSvD3n4AyLL29QDOsRPa50LQYsJpXnMOCcIs+Chh1K+VAJIyeaqYsQMNnjw0OhwAovYB0NplaKn6PtOBWDUyQRgtP7IpRd7iD3gs3QPRwQAQIAIQWQcgtCyOAIQACMMAIKAEIDKNAyHQBCByDEAIgDrI4m5RtcOZvulm/Goz9UvhdJoAUPqnOGZhOiWwC/VAtM8ApOLbHI4rQNUuPdh+Qr4rDUCIEiZ8QS5u++UmFBKEWdZ1b4f89/vXrRGvLii/6/SMqYCO16d+AI3R0RJPP//lOu6vpq0X1vh53nLrvinrJUuDxW6wpQYpfOJ4mgNVVKKRlnP1L6XcaGLts383vp3Cz9ePijUJC391mbMEX3qU6IEeX/41LrNy7ueX81fBTWCXneMrx8avNrf8vM51Om3Q+nu/3hOJlwvZSVcIR+fqxk8OI8dniueXsN9WurGKXd1CP2gquuz26qPDn/2tjHOL3/zmr6vlFLrRIUx2ywvZABS+ftYsdArHoLM+WoumTSSGG7JFV5HvSHfN+IY31PnooYTFX4geMiQV6MPxhB8sAEX6h+CCkoFds2CZTvhAmRRDya65RJvofmfYETrjkxc+AM2rBFEHaneOoygPtqJ+9OBAoz1/sBX12J1yHZQDqIdXnzx9YzPRdRfKU1yKAHUK2bkq0GNWpsewNXtwdYDGWMVN+2rfQqaLOFGAeseuR0/adZCyUwC6AI2JYPjl3lL0qAM0Po4lPA0ehvj0ozpA2wKTudbHa3ArQ/D2FvQ4AbQOQ45ea3MzNT1DppXa8iObW+oPTHn1eQZN9OULJfe22v1w/J4HmnubHXrsHSjN5X2O6QljgHzP4ExV2BugkyXM4rWeND2cPUAuicmHTiqAlJOUFZ2EAG1DnvCyGwkAhSVvG/5MdGJ0MgM0Pp2rcbMKQFezW5fp8A0CUCqSGrUCN4sC1A+mpaABoACeliUGgFCkWO4JARACIARACIAQAiAEQAiAEAAhBEAIgBAAIQBCCIAQACEAQgCEEAAhAEIAhAAIARBCAIQACAEQAiCEAAgBEAIgBEAIARACIARACIAQAiAEQAiAkL3+A/n5SmbIz/heAAAAAElFTkSuQmCC', 'base64');
 app.get('/manifest.json', (req, res) => {
     res.type('application/manifest+json').send(JSON.stringify({
         name: 'BotPanel',
@@ -39,7 +37,6 @@ app.get('/sw.js', (req, res) => {
     res.type('application/javascript').send("self.addEventListener('install', () => self.skipWaiting());\nself.addEventListener('activate', e => e.waitUntil(self.clients.claim()));\nself.addEventListener('fetch', () => {});\n");
 });
 
-// Panel sifresi: Render > Environment kismina PANEL_PASSWORD (ve istersen PANEL_USER) ekle
 const PANEL_USER = process.env.PANEL_USER || 'admin';
 const PANEL_PASSWORD = process.env.PANEL_PASSWORD || '';
 if (!PANEL_PASSWORD) originalWarn('UYARI: PANEL_PASSWORD tanimli degil, panel sifresiz aciliyor!');
@@ -64,7 +61,6 @@ io.use((socket, next) => {
     next(new Error('unauthorized'));
 });
 
-// Log yakalayıcı optimize edildi (Regex ile güvenli temizleme)
 const originalLog = console.log;
 console.log = function(...args) {
     originalLog.apply(console, args);
@@ -151,7 +147,6 @@ const htmlPage = `
         const BLOCK_COLORS = ['#444444', '#3b82f6', '#22c55e', '#eab308', '#71717a', '#78350f', '#a16207'];
         document.addEventListener('visibilitychange', () => { if (!document.hidden && currentActiveBot) updateMap(currentActiveBot); });
 
-        // Socket dinleyicisi tek bir kez tanımlandı (Mükerrer tetiklenme engellendi)
         socket.on('chatMessage', function(data) {
             const { botId, text } = data;
             if (!chatHistories[botId]) {
@@ -178,7 +173,7 @@ const htmlPage = `
                 <div class="bot-form-panel">
                     <h3>Yeni Bot Ekle ve Başlat</h3>
                     <div class="card">
-                        <label>Bot ID (Örn: bot1, bot2, farm)</label>
+                        <label>Bot ID (Örn: bot1, bot2)</label>
                         <input type="text" id="newId" placeholder="bot1">
                         <label>Minecraft Nick</label>
                         <input type="text" id="newUsername" placeholder="Kullanıcı Adı">
@@ -335,22 +330,6 @@ const htmlPage = `
                         </div>
                     </div>
                     <div class="card">
-                        <h3>Tarla Görevi (Pancar)</h3>
-                        <label>Sandık konumu (x y z)</label>
-                        <input type="text" id="farmChest" placeholder="100 64 200">
-                        <label>Tarla köşe 1 (x y z) - y: toprak katmanı</label>
-                        <input type="text" id="farmA" placeholder="110 64 200" oninput="updateFarmNeeds()">
-                        <label>Tarla köşe 2 (x y z)</label>
-                        <input type="text" id="farmB" placeholder="130 64 220" oninput="updateFarmNeeds()">
-                        <label>AFK yeri / ev (x y z)</label>
-                        <input type="text" id="farmHome" placeholder="95 64 195">
-                        <label>Su + ışık aralığı (blok, 3-9 arası)</label>
-                        <input type="text" id="farmStep" value="4" oninput="updateFarmNeeds()">
-                        <div id="farmNeeds" style="font-size: 13px; color: #ccc; margin: 8px 0; line-height: 1.7;"></div>
-                        <button class="loop-btn" onclick="startFarm('\${id}')">Tarlayı Başlat</button>
-                        <button class="stop" onclick="stopFarm('\${id}')">Tarlayı Durdur</button>
-                    </div>
-                    <div class="card">
                         <h3>Tekrarlayan Mesaj 1 (Loop 1)</h3>
                         <label>Loop 1 Mesajı</label>
                         <input type="text" id="loopMsgInput1" value="\${bots[id].recurringMsg1 || ''}" placeholder="Sürekli tekrarlanacak mesaj 1">
@@ -380,8 +359,6 @@ const htmlPage = `
             }
 
             socket.emit('joinBotRoom', id);
-            loadFarmFields(id);
-            updateFarmNeeds();
             loadInventory(id);
             startMapPolling(id);
         }
@@ -474,16 +451,6 @@ const htmlPage = `
                 ctx.textAlign = 'center';
                 ctx.fillText("Bot Aktif Değil", canvas.width / 2, canvas.height / 2);
             }
-        }
-
-        function getBlockColor(name) {
-            if (name.includes('water')) return '#3b82f6';
-            if (name.includes('grass') || name.includes('leaves')) return '#22c55e';
-            if (name.includes('sand')) return '#eab308';
-            if (name.includes('stone') || name.includes('ore') || name.includes('cobble')) return '#71717a';
-            if (name.includes('log') || name.includes('wood') || name.includes('planks')) return '#78350f';
-            if (name.includes('dirt')) return '#a16207';
-            return '#444444';
         }
 
         async function sendControl(id, control, status) {
@@ -601,66 +568,6 @@ const htmlPage = `
             showAddBotForm();
         }
 
-        function parseXYZ(text) {
-            const n = String(text || '').trim().split(/[ ,]+/).map(Number);
-            return n.length === 3 && n.every(Number.isFinite) ? { x: n[0], y: n[1], z: n[2] } : null;
-        }
-
-        const FARM_FIELDS = ['farmChest', 'farmA', 'farmB', 'farmHome', 'farmStep'];
-
-        function loadFarmFields(id) {
-            try {
-                const saved = JSON.parse(localStorage.getItem('farm:' + id) || '{}');
-                FARM_FIELDS.forEach(f => { const el = document.getElementById(f); if (el && saved[f]) el.value = saved[f]; });
-            } catch (e) {}
-        }
-
-        function farmSpans(min, max, S) {
-            const out = [];
-            for (let s = min; s <= max; s += S) out.push(Math.floor((s + Math.min(s + S - 1, max)) / 2));
-            return out;
-        }
-
-        function updateFarmNeeds() {
-            const box = document.getElementById('farmNeeds');
-            if (!box) return;
-            const a = parseXYZ(document.getElementById('farmA').value);
-            const b = parseXYZ(document.getElementById('farmB').value);
-            if (!a || !b) { box.innerHTML = 'Köşe 1 ve köşe 2 koordinatlarını yazınca gereken malzemeler burada görünür.'; return; }
-            const S = Math.min(9, Math.max(3, Number(document.getElementById('farmStep').value) || 4));
-            const w = Math.abs(a.x - b.x) + 1, h = Math.abs(a.z - b.z) + 1;
-            const points = farmSpans(0, w - 1, S).length * farmSpans(0, h - 1, S).length;
-            const tiles = w * h;
-            const seeds = tiles - points;
-            const slots = points + Math.ceil(seeds / 64) + Math.ceil(points / 64) + 1;
-            let html = '<b>' + w + ' x ' + h + ' alan (' + tiles + ' kare), aralık ' + S + '</b><br>';
-            html += '• Çapa: 1 (en fazla ' + seeds + ' kare sürülür; demir çapa yaklaşık 250, elmas yaklaşık 1561 kare dayanır)<br>';
-            html += '• Pancar tohumu: ' + seeds + '<br>';
-            html += '• Dolu su kovası: ' + points + '<br>';
-            html += '• Glowstone: ' + points + '<br>';
-            html += 'Envanter: ' + slots + ' / 36 slot';
-            if (slots > 36) html += ' <span style="color:#f44336">- YETMEZ, alanı küçült ya da aralığı artır</span>';
-            if (tiles > 2500) html += '<br><span style="color:#f44336">Alan çok büyük (en fazla 2500 kare)</span>';
-            box.innerHTML = html;
-        }
-
-        async function startFarm(id) {
-            const vals = {};
-            FARM_FIELDS.forEach(f => { vals[f] = document.getElementById(f).value; });
-            try { localStorage.setItem('farm:' + id, JSON.stringify(vals)); } catch (e) {}
-            const body = { id, chest: parseXYZ(vals.farmChest), a: parseXYZ(vals.farmA), b: parseXYZ(vals.farmB), home: parseXYZ(vals.farmHome), step: Number(vals.farmStep) || 4 };
-            if (!body.chest || !body.a || !body.b || !body.home) { alert('Dört koordinatı da x y z biçiminde yaz.'); return; }
-            const res = await fetch('/farm/start', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-            const json = await res.json();
-            alert(json.message);
-        }
-
-        async function stopFarm(id) {
-            const res = await fetch('/farm/stop', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id})});
-            const json = await res.json();
-            alert(json.message);
-        }
-
         async function sendChat(id) {
             let msg = document.getElementById('manualMsg').value;
             if(!msg) return;
@@ -759,7 +666,7 @@ app.get('/position/:id', (req, res) => {
     const raw = manager.getPosition ? manager.getPosition(req.params.id) : null;
     let body;
     if (raw) {
-        const R = 15; // radar yaricapi (blok)
+        const R = 15;
         const bx = Math.floor(raw.x);
         const bz = Math.floor(raw.z);
         const blocks = [];
@@ -792,17 +699,6 @@ app.post('/start', (req, res) => {
     }
     const result = manager.startBot(id, username, host, port, version, startupCommands, recurringMsg1, recurringInterval1, recurringMsg2, recurringInterval2, true, leaveAt);
     res.json(result);
-});
-
-app.post('/farm/start', (req, res) => {
-    const { id, chest, a, b, home } = req.body;
-    const ok = (v) => v && [v.x, v.y, v.z].every((n) => Number.isFinite(Number(n)));
-    if (![chest, a, b, home].every(ok)) return res.json({ status: "error", message: "Koordinatlar eksik ya da hatalı!" });
-    res.json(manager.startFarm(id, { chest, a, b, home, step: Number(req.body.step) || 4 }));
-});
-
-app.post('/farm/stop', (req, res) => {
-    res.json(manager.stopFarm(req.body.id));
 });
 
 app.post('/leave-at', (req, res) => {
