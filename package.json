@@ -6,9 +6,10 @@
   "scripts": {
     "start": "node server.js"
   },
-  "dependencies": {
+  "dependencies": { 
     "express": "^4.19.2",
     "mineflayer": "^4.35.0",
+    "mineflayer-pathfinder": "^2.4.5",
     "socket.io": "^4.7.5"
   }
 }
